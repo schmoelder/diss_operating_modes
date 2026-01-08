@@ -1,0 +1,14 @@
+name: operating_modes
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - cadet>=5.1,<6.0
+  - openssh
+  - git
+  - git-lfs
+  - lazygit
+  - pip
+  - pip:
+    - cadet-rdm>=1.0
+    - cadet-process>=0.11,<1.0

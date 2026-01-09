@@ -3,10 +3,9 @@ from datetime import date
 from itertools import product
 import os
 from pathlib import Path
-import sys; sys.path.insert(0, "../")
 from typing import Literal
 
-from cadetrdm import Case, Options
+from cadetrdm import Case, Options, ProjectRepo
 
 
 # %% Setup Process
@@ -56,6 +55,7 @@ class OptimizerOptions:
 # %% Setup options
 
 def setup_options(
+    study: ProjectRepo,
     operating_mode: Literal["batch-elution", "clr", "flip-flop", "mrssr", "serial-columns"],
     objective: Literal["single-objective", "multi-objective", "multi-objective-per-component"],
     separation_problem: Literal["standard", "difficult", "simple", "ternary"] | None = None,
@@ -142,7 +142,7 @@ def setup_options(
     options.debug = debug
     options.push = push
 
-    case = Case(options=options, name=name)
+    case = Case(study, options=options, name=name)
 
     if load:
         case.load()
@@ -153,7 +153,8 @@ def setup_options(
 def iterate_cases(
     operating_modes: list[str],
     objectives: list[str],
-    special_cases: list[dict] = None,
+    special_cases: list[dict] | None = None,
+    work_dir: os.PathLike = "./",
     **kwargs,
 ) -> list[Case]:
     """
@@ -168,21 +169,30 @@ def iterate_cases(
                 "objective": "multi-objective",
                 "ranking": [1, 1, 0]
             }]
+        work_dir: Path to store the resul
         **kwargs: Additional arguments for setup_case.
 
     Returns:
         List of Case objects.
     """
+    # Set up individual study."""
+    study = ProjectRepo(
+        work_dir,
+        url="git@github.com/schmoelder/diss_operating_modes.git",
+        branch="main",
+        package_dir="operating_modes"
+    )
+
     cases = []
     special_cases = special_cases or []
 
     # Standard cases: all modes × all objectives
     for mode, objective in product(operating_modes, objectives):
-        cases.append(setup_options(mode, objective, **kwargs))
+        cases.append(setup_options(study, mode, objective, **kwargs))
 
     # Special cases: user-defined configurations
     for case_config in special_cases:
-        cases.append(setup_options(**case_config, **kwargs))
+        cases.append(setup_options(study, **case_config, **kwargs))
 
     return cases
 
@@ -205,6 +215,9 @@ if __name__ == "__main__":
             )
     else:
         raise Exception("Unknown environment.")
+
+    # Set up working directory
+    work_dir = Path.home() / "studies" / "diss_operating_modes"
 
     operating_modes = [
         "batch-elution",
@@ -251,6 +264,7 @@ if __name__ == "__main__":
         operating_modes,
         objectives,
         special_cases=special_cases,
+        work_dir=work_dir,
         temp_directory_base=temp_directory_base,
         cache_directory_base=cache_directory_base,
         install_path=install_path,

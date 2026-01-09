@@ -89,8 +89,8 @@ def main(
     options = copy.deepcopy(options)  # Saveguard agains modification
     name = options.name
 
-    operating_mode = options["process_options"].pop("operating_mode")
-    case_module = importlib.import_module(operating_mode.replace("-", "_"))
+    operating_mode = options["process_options"].pop("operating_mode").replace("-", "_")
+    case_module = importlib.import_module(f"operating_modes.{operating_mode}")
 
     process = setup_process(
         case_module,

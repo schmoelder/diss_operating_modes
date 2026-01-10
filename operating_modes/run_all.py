@@ -25,6 +25,7 @@ class FractionationOptions:
     ranking: Literal["equal"] | list[int] = "equal"
     allow_empty_fractions: bool = True
     ignore_failed: bool = False
+    optimizer: Literal["COBYLA", "COBYQA"] | None = None
 
 
 @dataclass
@@ -105,6 +106,7 @@ def setup_options(
         ranking=ranking,
         allow_empty_fractions=kwargs.get("allow_empty_fractions", True),
         ignore_failed=kwargs.get("ignore_failed", False),
+        optimizer=kwargs.get("fractionation_optimizer", None),
     )
 
     cadet_options = CadetOptions(
@@ -265,6 +267,7 @@ if __name__ == "__main__":
         objectives,
         special_cases=special_cases,
         work_dir=work_dir,
+        fractionation_optimizer="COBYLA",
         temp_directory_base=temp_directory_base,
         cache_directory_base=cache_directory_base,
         install_path=install_path,

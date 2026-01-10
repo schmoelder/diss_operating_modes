@@ -12,7 +12,7 @@ from CADETProcess.performance import (
     EluentConsumption,
     Recovery,
 )
-from CADETProcess.optimization import OptimizerBase, U_NSGA3
+from CADETProcess.optimization import OptimizerBase, U_NSGA3, COBYQA
 
 
 class ProcessOptimization(OptimizationProblem):
@@ -82,8 +82,24 @@ class ProcessOptimization(OptimizationProblem):
         ],
         fractionation_options: dict,
     ) -> FractionationOptimizer | dict[int, FractionationOptimizer]:
+        fractionation_options = copy.deepcopy(fractionation_options)
+
+        match fractionation_options.pop("optimizer", None):
+            case "COBYLA":
+                optimizer = None
+            case "COBYQA":
+                optimizer = COBYQA()
+                optimizer.x_tol = 1e-4
+                optimizer.cv_nonlincon_tol = 5e-3
+                optimizer.initial_tr_radius = 1e-3
+            case _:
+                optimizer = None
+
         if objective != "multi-objective-per-component":
-            frac_opt = FractionationOptimizer()
+            frac_opt = FractionationOptimizer(
+                optimizer=optimizer
+            )
+
             self.add_evaluator(
                 frac_opt,
                 kwargs=fractionation_options,
@@ -94,8 +110,9 @@ class ProcessOptimization(OptimizationProblem):
                 if pur > 0:
                     fractionation_options = copy.deepcopy(fractionation_options)
                     fractionation_options.ranking = i
-
-                    frac_opt_i = FractionationOptimizer()
+                    frac_opt_i = FractionationOptimizer(
+                        optimizer = copy.deepcopy(optimizer)
+                    )
                     self.add_evaluator(
                         frac_opt_i,
                         kwargs=fractionation_options,

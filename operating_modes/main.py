@@ -46,7 +46,7 @@ def setup_optimization_problem(
     cadet_options: dict,
     fractionation_options: dict,
     name: str,
-    options_hash: str = "",
+    options_hash: str,
     transform_variables: Literal["auto", "linear", "log"] | None = None,
     _temp_directory_base: os.PathLike | None = None,
     _cache_directory_base: os.PathLike | None = None,

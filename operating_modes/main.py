@@ -81,17 +81,10 @@ def setup_optimization_problem(
     )
 
 
-# %% Run Optimization
-
-@tracks_results
-def main(
-    repo: ProjectRepo,
+def setup_optimization_problem_from_options(
     options: Options,
-):
-    options_hash = options.get_hash()
-    options = copy.deepcopy(options)  # Saveguard agains modification
-    name = options.name
-
+) -> ProcessOptimization:
+    """Set up the optimization problem and optimizer from options."""
     operating_mode = options["process_options"].pop("operating_mode").replace("-", "_")
     case_module = importlib.import_module(f"operating_modes.{operating_mode}")
 
@@ -104,9 +97,24 @@ def main(
         case_module,
         process,
         **options["optimization_options"],
-        name=name,
-        options_hash=options_hash,
+        name=options["name"],
+        options_hash=options.get_hash(),
     )
+
+    return optimization_problem
+
+
+# %% Run Optimization
+
+@tracks_results
+def main(
+    repo: ProjectRepo,
+    options: Options,
+):
+    options = copy.deepcopy(options)  # Safeguard against modification
+
+    optimization_problem = setup_optimization_problem_from_options(options)
+
     optimizer = setup_optimizer(
         optimization_problem,
         options["optimizer_options"],
@@ -116,7 +124,7 @@ def main(
         optimization_problem,
         save_results=True,
         use_checkpoint=False,
-        results_directory=repo.output_path / name,
+        results_directory=repo.output_path / options.name,
     )
 
     return results

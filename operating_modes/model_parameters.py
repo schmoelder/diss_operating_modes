@@ -49,8 +49,6 @@ def setup_binding_model(
     binding_model = Langmuir(component_system)
     binding_model.is_kinetic = is_kinetic
 
-    component_system = ComponentSystem(["A", "B"])
-
     match separation_problem:
         case "standard":
             binding_model.adsorption_rate = [0.02, 0.03]

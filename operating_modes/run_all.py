@@ -63,9 +63,9 @@ def setup_options(
     objective: Literal["single-objective", "multi-objective", "multi-objective-per-component"],
     separation_problem: Literal["standard", "difficult", "simple", "ternary"] | None = None,
     ranking: Literal["equal"] | list[int] = "equal",
-    debug: bool = False,
-    push: bool = True,
     load: bool = False,
+    push: bool = True,
+    debug: bool = False,
     **kwargs,
 ) -> Case:
     """
@@ -76,9 +76,9 @@ def setup_options(
         objective: The optimization objective.
         separation_problem: The binding model (defaults to mode-specific if None).
         ranking: The ranking for fractionation (default: "equal").
-        debug: If True, set debug mode for CADET-RDM
-        push: If True, push results after running the case.
         load: If True, try loading previously run results.
+        push: If True, push results after running the case.
+        debug: If True, set debug mode for CADET-RDM
         **kwargs: Additional arguments for ProcessParameters or OptimizationOptions.
     """
     # Default binding models per operating mode
@@ -271,14 +271,15 @@ if __name__ == "__main__":
         objectives,
         special_cases=special_cases,
         work_dir=work_dir,
+        push=True,
+        load=True,
+        debug=False,
+        install_path=install_path,
         fractionation_optimizer="COBYLA",
+        ignore_failed=True,
         transform_variables=None,
         temp_directory_base=temp_directory_base,
         cache_directory_base=cache_directory_base,
-        install_path=install_path,
-        load=True,
-        debug=False,
-        push=True,
         progress_frequency=1,
     )
 

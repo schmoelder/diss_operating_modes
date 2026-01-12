@@ -54,7 +54,11 @@ class ProcessOptimization(OptimizationProblem):
                 self.add_variable_dependency(**var_dep)
 
         simulator = self._setup_simulator(cadet_options)
-        frac_opt = self._setup_fractionator(objective, fractionation_options)
+        frac_opt = self._setup_fractionator(
+            objective,
+            fractionation_options,
+            process.n_comp,
+        )
         self._add_objectives(
             objective,
             simulator,
@@ -81,8 +85,26 @@ class ProcessOptimization(OptimizationProblem):
             "multi-objective-per-component",
         ],
         fractionation_options: dict,
+        n_comp: int,
     ) -> FractionationOptimizer | dict[int, FractionationOptimizer]:
         fractionation_options = copy.deepcopy(fractionation_options)
+        purity_required = fractionation_options["purity_required"]
+        if isinstance(purity_required, float):
+            purity_required = n_comp * [purity_required]
+
+        ranking = fractionation_options["ranking"]
+        if ranking == "equal":
+            ranking = n_comp * [1.0]
+        if isinstance(ranking, int):
+            index = ranking
+            ranking = n_comp * [0.0]
+            ranking[index] = 1.0
+
+        # Synchronize zeros between purity_required and ranking
+        for i in range(n_comp):
+            if purity_required[i] == 0 or ranking[i] == 0:
+                purity_required[i] = 0.0
+                ranking[i] = 0.0
 
         match fractionation_options.pop("optimizer", None):
             case "COBYLA":
@@ -106,8 +128,8 @@ class ProcessOptimization(OptimizationProblem):
             )
         else:
             frac_opt = {}
-            for i, pur in enumerate(fractionation_options.purity_required):
-                if pur > 0:
+            for i, (pur, rank) in enumerate(zip(purity_required, ranking)):
+                if pur > 0 and rank > 0:
                     fractionation_options = copy.deepcopy(fractionation_options)
                     fractionation_options.ranking = i
                     frac_opt_i = FractionationOptimizer(
@@ -116,9 +138,12 @@ class ProcessOptimization(OptimizationProblem):
                     self.add_evaluator(
                         frac_opt_i,
                         kwargs=fractionation_options,
+                        name=f"FractionationOptimizer_{i}"
                     )
+                else:
+                    frac_opt_i = None
 
-                    frac_opt[i] = frac_opt_i
+                frac_opt[i] = frac_opt_i
 
         return frac_opt
 
@@ -171,7 +196,7 @@ class ProcessOptimization(OptimizationProblem):
             recovery = Recovery()
             self.add_objective(
                 recovery,
-                n_objectives=2,
+                n_objectives=n_comp,
                 requires=[simulator, frac_opt],
                 minimize=False,
             )
@@ -179,33 +204,36 @@ class ProcessOptimization(OptimizationProblem):
             eluent_consumption = EluentConsumption()
             self.add_objective(
                 eluent_consumption,
-                n_objectives=2,
+                n_objectives=n_comp,
                 requires=[simulator, frac_opt],
                 minimize=False,
             )
         elif objective == "multi-objective-per-component":
-            for i in range():
-                productivity = Productivity()
+            for i, frac_opt_i in frac_opt.items():
+                if frac_opt_i is None:
+                    continue
+
+                productivity = Productivity(ranking=i)
                 self.add_objective(
                     productivity,
                     name=f"productivity_{i}",
-                    requires=[simulator, frac_opt[i]],
+                    requires=[simulator, frac_opt_i],
                     minimize=False,
                 )
 
-                recovery = Recovery()
+                recovery = Recovery(ranking=i)
                 self.add_objective(
                     recovery,
                     name=f"recovery_{i}",
-                    requires=[simulator, frac_opt[i]],
+                    requires=[simulator, frac_opt_i],
                     minimize=False,
                 )
 
-                eluent_consumption = EluentConsumption()
+                eluent_consumption = EluentConsumption(ranking=i)
                 self.add_objective(
                     eluent_consumption,
                     name=f"eluent_consumption_{i}",
-                    requires=[simulator, frac_opt[i]],
+                    requires=[simulator, frac_opt_i],
                     minimize=False,
                 )
         else:
@@ -213,15 +241,44 @@ class ProcessOptimization(OptimizationProblem):
 
     def _add_callback(self, simulator, frac_opt):
         """Add callback for post-processing."""
-        def callback(fractionator, individual, evaluation_object, callbacks_dir):
-            return fractionator.plot_fraction_signal(
-                file_name=f"{callbacks_dir}/{individual.id_short}_{evaluation_object}_fractionation.png",
-                show=False
-            )
+        if isinstance(frac_opt, dict):
+            for i, frac_opt_i in frac_opt.items():
+                if frac_opt_i is None:
+                    continue
 
-        self.add_callback(
-            callback, requires=[simulator, frac_opt]
-        )
+                def callback(
+                    fractionator,
+                    individual,
+                    evaluation_object,
+                    callbacks_dir
+                ):
+                    name = f"{individual.id_short}_{evaluation_object}_fractionation_{i}"
+                    return fractionator.plot_fraction_signal(
+                        file_name=f"{callbacks_dir}/{name}.png",
+                        show=False
+                    )
+
+                self.add_callback(
+                    callback,
+                    requires=[simulator, frac_opt_i],
+                    name=f"plot_fractionation_{i}",
+
+                )
+        else:
+            def callback(
+                fractionator,
+                individual,
+                evaluation_object,
+                callbacks_dir
+            ):
+                return fractionator.plot_fraction_signal(
+                    file_name=f"{callbacks_dir}/{individual.id_short}_{evaluation_object}_fractionation.png",
+                    show=False
+                )
+
+            self.add_callback(
+                callback, requires=[simulator, frac_opt]
+            )
 
 
 def setup_optimizer(

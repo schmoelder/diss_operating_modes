@@ -47,11 +47,14 @@ def setup_optimization_problem(
     fractionation_options: dict,
     name: str,
     options_hash: str = "",
+    transform_variables: Literal["auto", "linear", "log"] | None = None,
     _temp_directory_base: os.PathLike | None = None,
     _cache_directory_base: os.PathLike | None = None,
 ) -> ProcessOptimization:
     """Set up and return a configured `ProcessOptimization` object."""
-    variables = case_module.setup_variables()
+    variables = case_module.setup_variables(
+        transform=transform_variables
+    )
     linear_constraints = case_module.setup_linear_constraints()
     variable_dependencies = case_module.setup_variable_dependencies()
 

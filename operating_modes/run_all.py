@@ -39,6 +39,7 @@ class OptimizationOptions:
     objective: Literal["single-objective", "multi-objective", "multi-objective-per-component"]
     fractionation_options: FractionationOptions
     cadet_options: CadetOptions
+    transform_variables: Literal["auto", "linear", "log"] | None = None
     _cache_directory_base: os.PathLike | None = None
     _temp_directory_base: os.PathLike | None = None
 
@@ -118,6 +119,7 @@ def setup_options(
         objective=objective,
         fractionation_options=fractionation_opts,
         cadet_options=cadet_options,
+        transform_variables=kwargs.get("transform_variables", None),
         _cache_directory_base=kwargs.get("cache_directory_base", None),
         _temp_directory_base=kwargs.get("temp_directory_base", None),
     )
@@ -268,6 +270,7 @@ if __name__ == "__main__":
         special_cases=special_cases,
         work_dir=work_dir,
         fractionation_optimizer="COBYLA",
+        transform_variables=None,
         temp_directory_base=temp_directory_base,
         cache_directory_base=cache_directory_base,
         install_path=install_path,

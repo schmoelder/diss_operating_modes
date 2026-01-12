@@ -1,3 +1,5 @@
+from typing import Literal
+
 from CADETProcess.processModel import (
     ChromatographicColumnBase,
     ComponentSystem,
@@ -26,23 +28,25 @@ def setup_process(
     )
 
 
-def setup_variables() -> list[dict]:
+def setup_variables(
+    transform: Literal["auto", "linear", "log"] | None = None,
+)-> list[dict]:
     """Setup optimization variables."""
     variables = []
     variables.append({
         "name": "cycle_time",
         "lb": 10, "ub": 600,
-        "transform": "auto"
+        "transform": transform,
     })
     variables.append({
         "name": "feed_duration.time",
         "lb": 10, "ub": 300,
-        "transform": "auto"
+        "transform": transform,
     })
     variables.append({
         "name": "recycle_off.time",
         "lb": 10, "ub": 3000,
-        "transform": "auto"
+        "transform": transform,
     })
     return variables
 

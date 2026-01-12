@@ -52,6 +52,7 @@ class OptimizerOptions:
     n_cores: int = -4
     n_max_gen: int = 64
     pop_size: int | None = None
+    progress_frequency: int | None = None
 
 
 # %% Setup options
@@ -129,6 +130,7 @@ def setup_options(
         n_cores=kwargs.get("n_cores", -4),
         n_max_gen=kwargs.get("n_max_gen", 64),
         pop_size=kwargs.get("n_max_gen", None),
+        progress_frequency=kwargs.get("progress_frequency", None),
     )
 
     options = Options({
@@ -277,6 +279,7 @@ if __name__ == "__main__":
         load=True,
         debug=False,
         push=True,
+        progress_frequency=1,
     )
 
     run = True

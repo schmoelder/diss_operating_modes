@@ -226,7 +226,8 @@ class ProcessOptimization(OptimizationProblem):
 
 def setup_optimizer(
     optimization_problem: OptimizationProblem,
-    optimizer_options: dict
+    optimizer_options: dict,
+    progress_frequency: int | None = None
 ) -> OptimizerBase:
     """
     Set-up optimizer.
@@ -239,7 +240,9 @@ def setup_optimizer(
     optimization_problem : OptimizationProblem
         The optimization problem.
     optimizer_options : dict
-        DESCRIPTION.
+        Options for the optimizer.
+    progress_frequency : int | None, default=None
+        Number of generations after which the optimizer reports progress.
 
     Raises
     ------
@@ -258,6 +261,7 @@ def setup_optimizer(
             "n_cores": -4,
             "pop_size": optimization_problem.n_variables * 64,
             "n_max_gen": 64,
+            "progress_frequency": None,
         }
     else:
         raise ValueError(f"Unknown optimizer: {optimizer_options.optimizer}")

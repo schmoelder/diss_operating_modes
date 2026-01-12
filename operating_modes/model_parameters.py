@@ -64,7 +64,7 @@ def setup_binding_model(
             binding_model.capacity = [100, 100]
         case "ternary":
             binding_model.is_kinetic = is_kinetic
-            binding_model.adsorption_rate = [0.02, 0.03, 0.05]
+            binding_model.adsorption_rate = [0.01, 0.015, 0.03]
             binding_model.desorption_rate = [1, 1, 1]
             binding_model.capacity = [100, 100, 200]
 

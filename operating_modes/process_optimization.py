@@ -60,6 +60,7 @@ class ProcessOptimization(OptimizationProblem):
             simulator,
             frac_opt,
             fractionation_options.get("ranking", None),
+            process.n_comp,
         )
         self._add_callback(simulator, frac_opt)
 
@@ -110,6 +111,7 @@ class ProcessOptimization(OptimizationProblem):
         simulator,
         frac_opt,
         ranking,
+        n_comp,
     ):
         """Add objectives to optimization problem."""
         if objective == "single-objective":
@@ -141,11 +143,10 @@ class ProcessOptimization(OptimizationProblem):
                 minimize=False,
             )
         elif objective == "multi-objective":
-            # @TODO: Check n_objectives / n_comp
             productivity = Productivity()
             self.add_objective(
                 productivity,
-                n_objectives=2,
+                n_objectives=n_comp,
                 requires=[simulator, frac_opt],
                 minimize=False,
             )

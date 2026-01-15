@@ -33,6 +33,7 @@ class ProcessOptimization(OptimizationProblem):
         variable_dependencies: Optional[list[dict]] = None,
         cadet_options: Optional[dict] = None,
         fractionation_options: Optional[dict] = None,
+        add_meta_score: bool = False,
         cache_directory: Optional[os.PathLike] = None,
     ) -> None:
         super().__init__(
@@ -54,10 +55,14 @@ class ProcessOptimization(OptimizationProblem):
                 self.add_variable_dependency(**var_dep)
 
         simulator = self._setup_simulator(cadet_options)
-        frac_opt = self._setup_fractionator(
+
+        fractionation_options = self._sync_purity_and_ranking(
+            fractionation_options, process.n_comp
+        )
+
+        frac_opt = self._setup_fractionation_optimzer(
             objective,
             fractionation_options,
-            process.n_comp,
         )
         self._add_objectives(
             objective,
@@ -66,6 +71,11 @@ class ProcessOptimization(OptimizationProblem):
             fractionation_options.get("ranking", None),
             process.n_comp,
         )
+        if add_meta_score and objective != "single-objective":
+            self._add_meta_score(
+                simulator,
+                fractionation_options,
+            )
         self._add_callback(simulator, frac_opt)
 
     def _setup_simulator(self, cadet_options) -> Cadet:
@@ -76,17 +86,11 @@ class ProcessOptimization(OptimizationProblem):
 
         return process_simulator
 
-    def _setup_fractionator(
+    def _sync_purity_and_ranking(
         self,
-        objective: Literal[
-            "single-objective",
-            "multi-objective-ranked",
-            "multi-objective",
-            "multi-objective-per-component",
-        ],
         fractionation_options: dict,
         n_comp: int,
-    ) -> FractionationOptimizer | dict[int, FractionationOptimizer]:
+    ) -> dict:
         fractionation_options = copy.deepcopy(fractionation_options)
         purity_required = fractionation_options["purity_required"]
         if isinstance(purity_required, float):
@@ -106,6 +110,21 @@ class ProcessOptimization(OptimizationProblem):
                 purity_required[i] = 0.0
                 ranking[i] = 0.0
 
+        fractionation_options["purity_required"] = purity_required
+        fractionation_options["ranking"] = ranking
+
+        return fractionation_options
+
+    def _setup_fractionation_optimzer(
+        self,
+        objective: Literal[
+            "single-objective",
+            "multi-objective-ranked",
+            "multi-objective",
+            "multi-objective-per-component",
+        ],
+        fractionation_options: dict,
+    ) -> FractionationOptimizer | dict[int, FractionationOptimizer]:
         match fractionation_options.pop("optimizer", None):
             case "COBYLA":
                 optimizer = None
@@ -128,6 +147,9 @@ class ProcessOptimization(OptimizationProblem):
             )
         else:
             frac_opt = {}
+            purity_required = fractionation_options["purity_required"]
+            ranking = fractionation_options["ranking"]
+
             for i, (pur, rank) in enumerate(zip(purity_required, ranking)):
                 if pur > 0 and rank > 0:
                     fractionation_options = copy.deepcopy(fractionation_options)
@@ -221,12 +243,31 @@ class ProcessOptimization(OptimizationProblem):
                         requires=[simulator, frac_opt_i],
                         minimize=False,
                     )
-
             _add_KPI_objectives(Productivity, ranking, frac_opt)
             _add_KPI_objectives(Recovery, ranking, frac_opt)
             _add_KPI_objectives(EluentConsumption, ranking, frac_opt)
         else:
             raise ValueError(f"Unknown objective: '{objective}'")
+
+    def _add_meta_score(
+        self,
+        simulator,
+        fractionation_options,
+    ):
+        """Add meta score."""
+        try:
+            frac_opt = self.evaluators_dict["FractionationOptimizer"].evaluator
+        except KeyError:
+            frac_opt = self._setup_fractionation_optimzer(
+                "single-objective", fractionation_options,
+            )
+
+        performance = PerformanceProduct(fractionation_options["ranking"])
+        self.add_meta_score(
+            performance,
+            requires=[simulator, frac_opt],
+            minimize=False,
+        )
 
     def _add_callback(self, simulator, frac_opt):
         """Add callback for post-processing."""

@@ -37,9 +37,10 @@ class CadetOptions:
 @dataclass
 class OptimizationOptions:
     objective: Literal["single-objective", "multi-objective", "multi-objective-per-component"]
-    fractionation_options: FractionationOptions
     cadet_options: CadetOptions
+    fractionation_options: FractionationOptions
     transform_variables: Literal["auto", "linear", "log"] | None = None
+    add_meta_score: bool = True
     _cache_directory_base: os.PathLike | None = None
     _temp_directory_base: os.PathLike | None = None
 
@@ -78,8 +79,8 @@ def setup_options(
         ranking: The ranking for fractionation (default: "equal").
         load: If True, try loading previously run results.
         push: If True, push results after running the case.
-        debug: If True, set debug mode for CADET-RDM
-        **kwargs: Additional arguments for ProcessParameters or OptimizationOptions.
+        debug: If True, set debug mode for CADET-RDM.
+        **kwargs: Additional arguments for other options.
     """
     # Default binding models per operating mode
     default_separation_problems = {
@@ -103,6 +104,11 @@ def setup_options(
         apply_et_assumptions=kwargs.get("apply_et_assumptions", False),
     )
 
+    cadet_options = CadetOptions(
+        install_path=kwargs.get("install_path"),
+        use_dll=kwargs.get("use_dll"),
+    )
+
     fractionation_opts = FractionationOptions(
         purity_required=kwargs.get("purity_required", 0.95),
         ranking=ranking,
@@ -111,15 +117,11 @@ def setup_options(
         optimizer=kwargs.get("fractionation_optimizer", None),
     )
 
-    cadet_options = CadetOptions(
-        install_path=kwargs.get("install_path"),
-        use_dll=kwargs.get("use_dll"),
-    )
-
     optimization_options = OptimizationOptions(
         objective=objective,
-        fractionation_options=fractionation_opts,
         cadet_options=cadet_options,
+        fractionation_options=fractionation_opts,
+        add_meta_score=kwargs.get("add_meta_score", True),
         transform_variables=kwargs.get("transform_variables", None),
         _cache_directory_base=kwargs.get("cache_directory_base", None),
         _temp_directory_base=kwargs.get("temp_directory_base", None),

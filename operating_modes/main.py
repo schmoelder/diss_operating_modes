@@ -45,9 +45,10 @@ def setup_optimization_problem(
     objective: str,
     cadet_options: dict,
     fractionation_options: dict,
+    transform_variables: Literal["auto", "linear", "log"] | None,
+    add_meta_score: bool,
     name: str,
     options_hash: str,
-    transform_variables: Literal["auto", "linear", "log"] | None = None,
     _temp_directory_base: os.PathLike | None = None,
     _cache_directory_base: os.PathLike | None = None,
 ) -> ProcessOptimization:
@@ -77,6 +78,7 @@ def setup_optimization_problem(
         objective=objective,
         cadet_options=cadet_options,
         fractionation_options=fractionation_options,
+        add_meta_score=add_meta_score,
         cache_directory=cache_directory,
     )
 

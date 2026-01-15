@@ -129,7 +129,7 @@ def setup_options(
         optimizer=kwargs.get("optimizer", "U_NSGA3"),
         n_cores=kwargs.get("n_cores", -4),
         n_max_gen=kwargs.get("n_max_gen", 64),
-        pop_size=kwargs.get("n_max_gen", None),
+        pop_size=kwargs.get("pop_size", None),
         progress_frequency=kwargs.get("progress_frequency", None),
     )
 

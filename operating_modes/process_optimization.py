@@ -209,33 +209,22 @@ class ProcessOptimization(OptimizationProblem):
                 minimize=False,
             )
         elif objective == "multi-objective-per-component":
-            for i, frac_opt_i in frac_opt.items():
-                if frac_opt_i is None:
-                    continue
+            def _add_KPI_objectives(KPI, ranking, frac_opt):
+                for i, frac_opt_i in frac_opt.items():
+                    if frac_opt_i is None:
+                        continue
 
-                productivity = Productivity(ranking=i)
-                self.add_objective(
-                    productivity,
-                    name=f"productivity_{i}",
-                    requires=[simulator, frac_opt_i],
-                    minimize=False,
-                )
+                    kpi = KPI(ranking)
+                    self.add_objective(
+                        kpi,
+                        name=f"{kpi}_{i}",
+                        requires=[simulator, frac_opt_i],
+                        minimize=False,
+                    )
 
-                recovery = Recovery(ranking=i)
-                self.add_objective(
-                    recovery,
-                    name=f"recovery_{i}",
-                    requires=[simulator, frac_opt_i],
-                    minimize=False,
-                )
-
-                eluent_consumption = EluentConsumption(ranking=i)
-                self.add_objective(
-                    eluent_consumption,
-                    name=f"eluent_consumption_{i}",
-                    requires=[simulator, frac_opt_i],
-                    minimize=False,
-                )
+            _add_KPI_objectives(Productivity, ranking, frac_opt)
+            _add_KPI_objectives(Recovery, ranking, frac_opt)
+            _add_KPI_objectives(EluentConsumption, ranking, frac_opt)
         else:
             raise ValueError(f"Unknown objective: '{objective}'")
 

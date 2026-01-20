@@ -275,15 +275,16 @@ if __name__ == "__main__":
         special_cases=special_cases,
         work_dir=work_dir,
         push=True,
-        load=True,
         debug=False,
+        load=False,
         install_path=install_path,
         fractionation_optimizer="COBYLA",
-        ignore_failed=True,
-        transform_variables=None,
+        ignore_failed=False,
+        transform_variables="auto",
+        add_meta_score=True,
         temp_directory_base=temp_directory_base,
         cache_directory_base=cache_directory_base,
-        progress_frequency=1,
+        progress_frequency=None,
     )
 
     run = True

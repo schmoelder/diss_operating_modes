@@ -59,15 +59,21 @@ metrics = {
 
 def get_cases_by_operating_mode(
     operating_mode: Literal["batch-elution", "clr", "flip-flop", "mrssr", "serial-columns"],
+    index_by_name: bool = False,
     **kwargs: Any,
 ) -> list[Case]:
     """Return cases for a given operating mode."""
     cases = setup_cases(**kwargs)
 
-    return [
+    cases_by_mode = [
         case for case in cases
         if case.options.process_options.operating_mode == operating_mode
     ]
+
+    if index_by_name:
+        cases_by_mode = index_cases_by_name(cases_by_mode)
+
+    return cases_by_mode
 
 
 def index_cases_by_name(cases: list[Case]) -> dict[str, Case]:

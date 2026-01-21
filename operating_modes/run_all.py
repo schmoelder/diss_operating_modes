@@ -208,14 +208,12 @@ def iterate_cases(
 
 
 def setup_cases(
-    work_dir: os.PathLike | None = None,
     **kwargs: Any,
 ) -> list[Case]:
     """
     Set up cases based on the current environment and parameters.
 
     Args:
-        work_dir: Working directory for the simulation.
         kwargs: Additional kwargs for iterate cases.
     Returns:
         List of cases.
@@ -278,13 +276,13 @@ def setup_cases(
         ],
     ]
 
-    if work_dir is None:
-        work_dir = Path("./")
-
     return iterate_cases(
         operating_modes,
         objectives,
         special_cases=special_cases,
+        temp_directory_base=temp_directory_base,
+        cache_directory_base=cache_directory_base,
+        install_path=install_path,
         **kwargs,
     )
 

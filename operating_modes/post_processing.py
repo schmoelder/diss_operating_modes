@@ -2,9 +2,9 @@ import copy
 import math
 import os
 from pathlib import Path
-from typing import Optional
+import string
+from typing import Any, Literal, Optional
 
-from cadetrdm import Case
 from CADETProcess.fractionation import Fractionator
 from CADETProcess.optimization import (
     OptimizationProblem,
@@ -13,31 +13,93 @@ from CADETProcess.optimization import (
 )
 from CADETProcess.simulationResults import SimulationResults
 from CADETProcess import plotting
+from CADETProcess.performance import PerformanceProduct
+from cadetrdm import Case
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import numpy as np
-import numpy.typing as npt
-import tabulate
 
-from operating_modes.run_all import setup_study, setup_cases
+import sys; sys.path.insert(0, "../")
+from operating_modes.run_all import setup_cases
+from operating_modes.main import setup_optimization_problem_from_options, setup_optimizer
 
+
+# %% Utils
+
+# Metric units (order matters for iteration!)
+metrics = {
+    "productivity": {
+        "symbol": r"PR_i",
+        "unit": r"\text{mol}~\text{L}_{\text{s}}^{-1}~\text{d}^{-1}",
+        "factor": 3600*24/1000,
+    },
+    "recovery": {
+        "symbol": r"Y_i",
+        "unit": r"\text{\%}",
+        "factor": 100,
+    },
+    "eluent_consumption": {
+        "symbol": r"EC_i",
+        "unit": r"\text{m}_{\text{el}}^3~\text{mol}^{-1}",
+        "factor": 1,
+    },
+    "meta": {
+        "symbol": r"f(x)",
+        "unit": r"\text{mol}^3~\text{m}_{\text{el}}^{-3}~\text{m}_{\text{s}}^{-3}~\text{s}^{-1}",
+        "factor": 1,
+    },
+    "purity": {
+        "symbol": r"PU_i",
+        "unit": r"\text{\%}",
+        "factor": 100,
+    },
+}
+
+# %% Setup cases
+
+def get_cases_by_operating_mode(
+    operating_mode: Literal["batch-elution", "clr", "flip-flop", "mrssr", "serial-columns"],
+    **kwargs: Any,
+) -> list[Case]:
+    """Return cases for a given operating mode."""
+    cases = setup_cases(**kwargs)
+
+    return [
+        case for case in cases
+        if case.options.process_options.operating_mode == operating_mode
+    ]
+
+
+def index_cases_by_name(cases: list[Case]) -> dict[str, Case]:
+    """Return dict with cases indexed by name."""
+    return {case.name: case for case in cases}
+
+
+# %% Load results
 
 def load_optimization_config(
     case: Case
 ) -> tuple[OptimizationProblem, OptimizerBase]:
     """Set up optimization problem and optimizer."""
-    module = case.project_repo.module.optimization
     options = case.options
-    optimization_problem = module.setup_optimization_problem(options)
-    optimizer = module.setup_optimizer(optimization_problem, options.optimizer_options)
+    optimization_problem = setup_optimization_problem_from_options(options)
+    optimizer = setup_optimizer(
+        optimization_problem,
+        options["optimizer_options"],
+    )
     return optimization_problem, optimizer
 
 
-def load_optimization_results(case: Case) -> OptimizationResults:
+def load_optimization_results(
+    case: Case,
+    load_kwargs: Any = None,
+) -> OptimizationResults:
     """Load optimization results for a given case."""
-    case.load()
-    options = case.options
+    results_path = case.load(**load_kwargs or {})
+    if not results_path:
+        raise FileNotFoundError("Could not find matching results.")
     optimization_problem, optimizer = load_optimization_config(case)
-    checkpoint_path = case.results_path / options.objective / "final.h5"
+    checkpoint_path = results_path / case.name / "final.h5"
     optimization_results = OptimizationResults(optimization_problem, optimizer)
     optimization_results.load_results(checkpoint_path)
     return optimization_results
@@ -62,21 +124,23 @@ def simulate_results(
 def fractionate_results(
     optimization_problem: OptimizationProblem,
     simulation_results: SimulationResults,
+    evaluator_index: int = 1,
 ) -> Fractionator:
     """Optimize fractionation."""
-    frac_opt = optimization_problem.evaluators[1]
-    fractionator = frac_opt.evaluate(simulation_results)
-
-    return fractionator
+    frac_opt = optimization_problem.evaluators[evaluator_index]
+    return frac_opt.evaluate(simulation_results)
 
 
 def simulate_and_plot(
     optimization_problem: OptimizationProblem,
     x: list[float],
+    fractionator_index: int = 1,
 ) -> tuple[plt.Figure, plt.Axes]:
     """Simulate and plot individual of optimization results."""
     simulation_results = simulate_results(optimization_problem, x)
-    fractionator = fractionate_results(optimization_problem, simulation_results)
+    fractionator = fractionate_results(
+        optimization_problem, simulation_results, fractionator_index
+    )
 
     fig, ax = fractionator.plot_fraction_signal()
 
@@ -147,13 +211,21 @@ def format_value_to_latex(
     return f"\\mathbf{{{formatted_val}}}" if bold else formatted_val
 
 
-def get_next_n_entries(
-    lst: list,
-    n: int
-) -> list:
-    """Iterate over a list and yield the next n entries."""
-    for i in range(0, len(lst), n):
-        yield lst[i:i + n]
+def format_mm_ss(seconds):
+    """Format a duration as mm:ss.
+
+    Parameters
+    ----------
+    seconds : int
+        Duration in seconds.
+
+    Returns
+    -------
+    str
+        Duration formatted as mm:ss.
+    """
+    m, s = divmod(int(seconds), 60)
+    return f"{m:02d}:{s:02d}"
 
 
 # %% Embed in MyST directives
@@ -172,10 +244,39 @@ def embed_table_in_directive(
     formatted_table += "\n"
     if name:
         formatted_table += f":name: {name}\n"
-    formatted_table += ":widths: grid\n"
     formatted_table += f":align: {align}\n"
     formatted_table += "\n"
     formatted_table += f"{table}\n"
+    formatted_table += "```"
+
+    return formatted_table
+
+
+def embed_table_in_list_table_directive(
+    data: str,
+    caption: str | None = None,
+    name: str | None = None,
+    align: str = "center",
+    header_rows: int = 1,
+) -> str:
+    """Format table to embed it in MyST list-table directive."""
+    formatted_table = "```{list-table}"
+    if caption:
+        formatted_table += f" {caption}"
+
+    formatted_table += "\n"
+    if name:
+        formatted_table += f":name: {name}\n"
+    formatted_table += f":header-rows: {header_rows}\n"
+    formatted_table += f":align: {align}\n"
+    formatted_table += "\n"
+
+    for row in data:
+        # First item in row gets the '*' bullet, others get '-'
+        formatted_table += f"* - {row[0]}\n"
+        for item in row[1:]:
+            formatted_table += f"  - {item}\n"
+
     formatted_table += "```"
 
     return formatted_table
@@ -186,14 +287,13 @@ def embed_figure_in_directive(
     figure_path: os.PathLike,
     name: None,
     caption: str,
+    load_kwargs: dict | None = None,
     scale: Optional[int] = 100,
     width: Optional[int] = None,
 ) -> str:
     """Format figure to embed it in MyST figure directive."""
-    results_branch = case.results_branch
-
-    cache_path = case.project_repo.copy_data_to_cache(results_branch)
-    results_dir = cache_path / case.name.split("_")[0]
+    results_path = case.load(**load_kwargs or {})
+    results_dir = results_path / case.name
     relative_results_dir = results_dir.relative_to(Path.cwd(), walk_up=True)
 
     figure_path = relative_results_dir / figure_path
@@ -215,254 +315,402 @@ def embed_figure_in_directive(
     return embedded_figure
 
 
-# %% Single objective results
+# %% Single objective
 
 def setup_soo_results_table(
-    soo_results: OptimizationResults,
-    fractionator: Fractionator,
-    variable_units: dict[str, str]=None
-):
-    """Set up KPI table for single-objective optimization results."""
-    soo_problem = soo_results.optimization_problem
-    process_name = soo_problem.evaluation_objects[0].name
-    f = soo_results.f[0]
-
-    ind = soo_results.pareto_front.individuals[0]
-
-    headers = ["Category", "Parameter", "Value(s)"]
-
-    # Variable values
-    if variable_units is None:
-        variable_units = {rf"\text{{{var_name}}}": "-" for var_name in soo_problem.variable_names}
-
-    categories = ind.n_x * [" "]
-    categories[0] = "**Variables**"
-
-    rows = []
-    rows += [
-        [category, rf"${name}~/~{unit}$", f"${format_float_adaptive(x)}$"]
-        for category, name, unit, x
-        in zip(categories, variable_units.keys(), variable_units.values(), ind.x)
-    ]
-
-    # Metric values
-    rows += [
-        [
-            "**Metrics**",
-            r"$f(x)~/~\text{mol}^3~\text{m}_{\text{el}}^{-3}~\text{m}_{\text{s}}^{-3}~\text{s}^{-1}$",
-            format_value_to_latex(f[0])
-        ],
-        [
-            " ",
-            r"$PU_i~/~\%$",
-            format_value_to_latex(fractionator.purity*100)
-        ],
-        [
-            " ",
-            r"$PR_i~/~\text{mol}~\text{L}_{\text{s}}{-1}~\text{d}^{-1}$",
-            format_value_to_latex(fractionator.productivity*3600*24/1000)
-        ],
-        [
-            " ",
-            r"$Y_i~/~\%$",
-            format_value_to_latex(fractionator.recovery*100)
-        ],
-        [
-            " ",
-            r"$EC_i~/~\text{m}_{\text{el}}^3~\text{mol}^{-1}$",
-            format_value_to_latex(fractionator.eluent_consumption)
-        ],
-    ]
-
-    # Generate table
-    table = tabulate(rows, headers=headers, floatfmt=".2f", tablefmt="github")
-
-    caption = f"Optimization variables and KPIs of single objective {process_name}."
-    name = f"{process_name.replace(" ", "_").lower()}_soo_kpi"
-    formatted_table = embed_table_in_directive(table, caption, name)
-
-    return formatted_table
-
-
-def process_soo_results(
-    soo_results: OptimizationResults,
-    variable_units=None,
-):
-    """Process single objective optimization results."""
-    soo_problem = soo_results.optimization_problem
-
-    x = soo_results.x[0]
-    simulation_results = simulate_results(soo_problem, x)
-
-    fractionator = fractionate_results(soo_problem, simulation_results)
-    fig, ax = fractionator.plot_fraction_signal()
-
-    table = setup_soo_results_table(soo_results, fractionator, variable_units)
-
-    return fig, ax, table
-
-
-# %% Multi-objective results
-
-def setup_moo_results_table(
-    moo_results: OptimizationResults,
-    fractionators: Optional[list[Fractionator]],
-    variable_units: dict[str, str] = None,
+    case: Case,
+    x: list[float],
+    frac: Fractionator,
+    variables: dict,
 ) -> str:
-    """Set up KPI table for multi-objective optimization results."""
-    n_comp = fractionators[0].n_comp
+    """
+    Set up KPI table for single-objective optimization results.
 
-    moo_problem = moo_results.optimization_problem
-    process_name = moo_problem.evaluation_objects[0].name
+    Parameters
+    ----------
+    case : Case
+        The case study.
+    x : list[float]
+        Best individual.
+    frac : Fractionator
+        Fractionator corresponding to best individual.
+    variables : dict
+        Dictionary mapping variable names to LaTeX-formatted units.
 
-    # Meta score
-    f_meta = np.sum(moo_results.f_minimized, axis=0)
-    f_meta_index = np.argmin(f_meta)  # TODO: Add to table (optional)
+    Returns
+    -------
+    str
+        Markdown table as a string, with LaTeX-formatted values and units.
+    """
+    operating_mode = case.options.process_options.operating_mode
+    separation_problem = case.options.process_options.separation_problem
+    objective = case.options.optimization_options.objective
 
-    # Default variable units
-    if variable_units is None:
-        variable_units = {rf"{var_name}": " " for var_name in moo_problem.variable_names}
+    process_name = (
+        operating_mode if separation_problem == "standard"
+        else f"{operating_mode}_{separation_problem}"
+    )
+    objective_short = objective.replace("single-objective", "soo")
 
-    # Metric units (Note: Order matters here!)
-    metric_units = {
-        r"PU_i": r"\text{\%}",
-        r"PR_i": r"\text{mol}~\text{L}_{\text{s}}^{-1}~\text{d}^{-1}",
-        r"Y_i": r"\text{\%}",
-        r"EC_i": r"\text{m}_{\text{el}}^3~\text{mol}^{-1}",
-    }
-
-    # Get best indices and values
-    f_best_indices = moo_results.f_best_indices  # Indices of Pareto edge points
-    best_individuals = [moo_results.meta_front.individuals[ind] for ind in f_best_indices]
-
-    # Headers
-    headers = [
-        *[rf"${var_name}~/~{unit}$" for var_name, unit in variable_units.items()],
-        *[rf"${metric_name}~/~{unit}$" for metric_name, unit in metric_units.items()],
-    ]
+    f_meta = PerformanceProduct(ranking="equal")
 
     # Initialize rows
     rows = []
 
-    # Add rows for each Pareto edge point
-    for i_case, (ind, frac) in enumerate(zip(best_individuals, fractionators)):
-        row = []
+    # Headers
+    rows.append([
+        *[rf"${var_info['symbol']}~/$" for var_info in variables.values()],
+        *[rf"${metric_info['symbol']}~/$" for metric_info in metrics.values()],
+    ])
+    rows.append([
+        *[rf"${var_info['unit']}$" for var_info in variables.values()],
+        *[rf"${metric_info['unit']}$" for metric_info in metrics.values()],
+    ])
 
-        # Add variables
-        for x_i in ind.x:
-            row.append(f"${format_value_to_latex(x_i)}$")
+    # Data
+    row = []
 
-        # Add metrics
-        values = []
-        values.extend(frac.purity*100)
-        values.extend(frac.productivity*3600*24/1000)
-        values.extend(frac.recovery*100)
-        values.extend(frac.eluent_consumption)
+    # Add variables
+    for i_x, var_info in enumerate(variables.values()):
+        if var_info.get("format_mm_ss"):
+            x_i = f"${format_mm_ss(x[i_x])}$"
+        else:
+            x_i = x[i_x]*var_info["factor"]
+            x_i = f"${format_value_to_latex(x_i)}$"
 
+        row.append(x_i)
+
+    # Add metrics with bold diagonal
+    for i_v, (metric_name, metric_info) in enumerate(metrics.items()):
+        if metric_name == "meta":
+            metric_values = f_meta(frac.performance)
+        else:
+            metric_values = getattr(frac, metric_name)
+        scaled_values = metric_values * metric_info["factor"]
         formatted_values = []
-        for i_v, value in enumerate(values):
-            if i_v == i_case + n_comp:
-                formatted_value = format_value_to_latex(value, bold=True)
-            else:
-                formatted_value = format_value_to_latex(value)
+        for value in scaled_values:
+            formatted_values.append(format_value_to_latex(value))
 
-            formatted_values.append(formatted_value)
+        formatted_values = (
+            f"${formatted_values[0]}$" if len(formatted_values) == 1
+            else f"$[{', '.join(formatted_values)}]$"
+        )
+        row.append(formatted_values)
 
-        for chunk in get_next_n_entries(formatted_values, n_comp):
-            row.append(f"$[{', '.join(chunk)}]$")
-
-        # Add f_meta TODO
-        rows.append(row)
-
-    # Generate table
-    table = tabulate(
-        rows,
-        headers=headers,
-        tablefmt="github",
-    )
+    rows.append(row)
 
     # Caption and name
-    caption = f"Pareto edge points for multi-objective {process_name} optimization."
-    name = f"{process_name.replace(' ', '_').lower()}_moo_kpi"
+    table_caption = (
+        f"Optimization variables and KPIs of {objective} optimization of "
+        f"{operating_mode} process with a {separation_problem} component system. "
+    )
+    table_name = f"{process_name}_{objective_short}_kpi"
 
-    return embed_table_in_directive(table, caption, name)
+    return embed_table_in_list_table_directive(
+        rows,
+        table_caption,
+        table_name,
+        header_rows=2
+    )
+
+
+def process_soo_results(
+    case: Case,
+    variables: dict | None = None,
+    load_kwargs: dict | None = None,
+):
+    """Process multi-objective optimization results."""
+    operating_mode = case.options.process_options.operating_mode
+    separation_problem = case.options.process_options.separation_problem
+    objective = case.options.optimization_options.objective
+
+    optimization_results = load_optimization_results(
+        case,
+        load_kwargs,
+    )
+    optimization_problem = optimization_results.optimization_problem
+
+    # --- Objectives Figure ---
+    fig_objectives, axs_objectives = optimization_results.plot_objectives()
+
+    for i_var, (variable_name, variable_info) in enumerate(variables.items()):
+        ax = axs_objectives[0, i_var]
+
+        ax.set_xlabel(f"${variable_info['symbol']}~/~{variable_info['unit']}$")
+        ax.xaxis.set_major_formatter(ticker.FuncFormatter(
+            lambda x, _: f"{x*variable_info['factor']:.0f}")
+        )
+
+        ax.set_ylabel(f"${metrics['meta']['symbol']}~/~{metrics['meta']['unit']}$")
+        ax.yaxis.set_major_formatter(ticker.FuncFormatter(
+            lambda y, _: f"{y*metrics['meta']['factor']:.0f}")
+        )
+
+    fig_objectives_caption = (
+        f"Objective function values for {objective} optimization of "
+        f"{operating_mode} process with {separation_problem} component system."
+    )
+
+    # --- Chromatograms ---
+    x = optimization_results.x[0]
+    simulation_results = simulate_results(optimization_problem, x)
+
+    frac = fractionate_results(optimization_problem, simulation_results)
+    fig_chrom, ax_chrom = frac.plot_fraction_signal()
+    fig_chrom_caption = (
+        f"Optimal chromatogram of {objective} optimization of "
+        f"{operating_mode} process with {separation_problem} component system."
+    )
+
+    # --- Table ---
+    table = setup_soo_results_table(
+        case,
+        x,
+        frac,
+        variables,
+    )
+
+    return (
+        (fig_objectives, axs_objectives, fig_objectives_caption),
+        (fig_chrom, ax_chrom, fig_chrom_caption),
+        table,
+    )
+
+
+# %% Multi-objective
+
+def setup_moo_results_table(
+    case: Case,
+    moo_problem: OptimizationProblem,
+    best_individuals: list[tuple[list, Fractionator]],
+    variables: dict,
+) -> str:
+    """
+    Set up KPI table for multi-objective-per-component optimization results.
+
+    Parameters
+    ----------
+    case : Case
+        The case study.
+    moo_problem : OptimizationProblem
+        Multi-objective problem.
+    best_individuals : list[tuple[list, Fractionator]]
+        List of tuples containing best individuals and corresponding fractionators.
+    variables : dict
+        Dictionary mapping variable names to LaTeX-formatted units.
+
+    Returns
+    -------
+    str
+        Markdown table as a string, with LaTeX-formatted values and units.
+    """
+    operating_mode = case.options.process_options.operating_mode
+    separation_problem = case.options.process_options.separation_problem
+    objective = case.options.optimization_options.objective
+
+    process_name = (
+        operating_mode if separation_problem == "standard"
+        else f"{operating_mode}_{separation_problem}"
+    )
+    objective_short = objective.replace("multi-objective", "moo")
+    objective_short = objective_short.replace("per-component", "pc")
+
+    f_meta = PerformanceProduct(ranking="equal")
+
+    # Initialize rows
+    rows = []
+
+    # Headers
+    rows.append([
+        " ",
+        *[rf"${var_info['symbol']}~/$" for var_info in variables.values()],
+        *[rf"${metric_info['symbol']}~/$" for metric_info in metrics.values()],
+    ])
+    rows.append([
+        " ",
+        *[rf"${var_info['unit']}$" for var_info in variables.values()],
+        *[rf"${metric_info['unit']}$" for metric_info in metrics.values()],
+    ])
+
+    # Data
+    for i_case, (x, frac) in enumerate(best_individuals):
+        row = []
+
+        # Add label
+        row.append(f"({string.ascii_lowercase[i_case]})")
+
+        # Add variables
+        for i_x, var_info in enumerate(variables.values()):
+            if var_info.get("format_mm_ss"):
+                x_i = f"${format_mm_ss(x[i_x])}$"
+            else:
+                x_i = x[i_x]*var_info["factor"]
+                x_i = f"${format_value_to_latex(x_i)}$"
+
+            row.append(x_i)
+
+        # Add metrics with bold diagonal
+        counter = 0
+        for i_v, (metric_name, metric_info) in enumerate(metrics.items()):
+            if metric_name == "meta":
+                metric_values = f_meta(frac.performance)
+            else:
+                metric_values = getattr(frac, metric_name)
+            scaled_values = metric_values * metric_info["factor"]
+            formatted_values = []
+            for value in scaled_values:
+                bold = counter == i_case
+                formatted_values.append(format_value_to_latex(value, bold=bold))
+                counter += 1
+            formatted_values = (
+                f"${formatted_values[0]}$" if len(formatted_values) == 1
+                else f"$[{', '.join(formatted_values)}]$"
+            )
+            row.append(formatted_values)
+
+        rows.append(row)
+
+    # Caption and name
+    table_caption = (
+        f"Optimization variables and KPIs for Pareto edge points of {objective} "
+        f"optimization of the {operating_mode} process with a {separation_problem} "
+        "component system. Each row corresponds to a non-dominated solution "
+        f"that is extreme with respect to one objective (highlighted in bold)."
+    )
+    table_name = f"{process_name}_{objective_short}_kpi"
+
+    return embed_table_in_list_table_directive(
+        rows,
+        table_caption,
+        table_name,
+        header_rows=2
+    )
 
 
 def process_moo_results(
-    moo_results: OptimizationResults,
-    variable_units=None
-) -> tuple[plt.Figure, npt.NDArray[plt.Axes], str]:
+    case: Case,
+    variables: dict | None = None,
+    load_kwargs: dict | None = None,
+    use_population_all: bool = True,
+):
     """Process multi-objective optimization results."""
-    moo_problem = moo_results.optimization_problem
+    operating_mode = case.options.process_options.operating_mode
+    separation_problem = case.options.process_options.separation_problem
+    objective = case.options.optimization_options.objective
 
-    x_best = moo_results.x[moo_results.f_best_indices]
-    simulation_results = [simulate_results(moo_problem, x) for x in x_best]
+    optimization_results = load_optimization_results(
+        case,
+        load_kwargs,
+    )
+    optimization_problem = optimization_results.optimization_problem
 
-    fractionators = [
-        fractionate_results(moo_problem, sim_results)
-        for sim_results in simulation_results
+    n_comp = optimization_problem.evaluation_objects[0].n_comp
+    n_metrics = int(optimization_problem.n_objectives / n_comp)
+
+    # --- Objectives Figure ---
+    fig_objectives, axs_objectives = optimization_results.plot_objectives()
+
+    for i_metric, (metric_name, metric_info) in enumerate(metrics.items()):
+        if metric_name == "purity":
+            break
+        for i_comp in range(n_comp):
+            for i_var, (variable_name, variable_info) in enumerate(variables.items()):
+                ax = axs_objectives[n_comp*i_metric+i_comp, i_var]
+
+                ax.set_xlabel(f"${variable_info['symbol']}~/~{variable_info['unit']}$")
+                ax.xaxis.set_major_formatter(ticker.FuncFormatter(
+                    lambda x, _: f"{x*variable_info['factor']:.0f}")
+                )
+
+                ax.set_ylabel(f"${metric_info['symbol']}~/~{metric_info['unit']}$")
+                ax.yaxis.set_major_formatter(ticker.FuncFormatter(
+                    lambda y, _: f"{y*metric_info['factor']:.0f}")
+                )
+            if metric_name == "meta":
+                break
+
+    fig_objectives_caption = (
+        f"Objective function values for {objective} optimization of "
+        f"{operating_mode} process with {separation_problem} component system."
+    )
+
+    # --- Chromatograms ---
+    if use_population_all:
+        population = optimization_results.population_all
+    else:
+        population = optimization_results.meta_front
+
+    # Build x_best upfront
+    x_best = population.x[population.f_best_indices]
+    simulation_results = [
+        simulate_results(optimization_problem, x) for x in x_best
     ]
 
-    n_comp = fractionators[0].n_comp
+    # Simulate and Fractionate
+    simulation_results = np.array(simulation_results).reshape(n_metrics, n_comp)
 
-    fig, axs = plotting.setup_figure(
-        n_rows=int(len(x_best)/n_comp),
-        n_cols=n_comp,
+    fractionators = np.zeros_like(simulation_results)
+    for i_metric in range(n_metrics):
+        for i_comp in range(n_comp):
+            sim_results = simulation_results[i_metric, i_comp]
+            index = i_comp+1 if objective == "multi-objective-per-component" else 1
+            fractionators[i_metric, i_comp] = fractionate_results(
+                optimization_problem, sim_results, index
+            )
+
+    # Plot
+    fig_chrom, axs_chrom = plotting.setup_figure(
+        nrows=n_metrics+1,
+        ncols=n_comp,
         scale_with_subplots=True,
     )
-    for frac, ax in zip(fractionators, axs.ravel()):
-        frac.plot_fraction_signal(fig=fig, ax=ax)
 
-    table = setup_moo_results_table(moo_results, fractionators, variable_units)
+    counter = 0
+    for i_metric in range(n_metrics):
+        for i_comp in range(n_comp):
+            frac = fractionators[i_metric, i_comp]
+            ax = axs_chrom[i_metric][i_comp]
+            frac.plot_fraction_signal(ax=ax)
 
-    return fig, axs, table
+            label = f"({string.ascii_lowercase[counter]})"
+            plotting.add_text(ax, label)
+            counter += 1
 
+    # Include meta score (performance product)
+    f_meta_index = population.m_best_indices[0]
+    x_meta = population.x[f_meta_index]
+    ax = axs_chrom[-1, 0]
 
-# %% Combined wrapper
+    sim_meta = simulate_results(optimization_problem, x_meta)
+    frac_meta = fractionate_results(optimization_problem, sim_meta, -1)
+    frac_meta.plot_fraction_signal(ax=ax)
+    label = f"({string.ascii_lowercase[counter]})"
+    plotting.add_text(ax, label)
 
-def create_figure_and_table(
-    studies_root,
-    study,
-    case_name,
-    variable_units,
-    processing_kwargs = None,
-    **embed_kwargs,
-):
-    study = setup_study(studies_root, study)
-    cases = setup_cases(study, load=True)
-    case = cases[case_name]
+    for ax in axs_chrom[-1, 1:]:
+        ax.axis('off')
 
-    if "single-objective" in case_name:
-        processing_method = process_soo_results
-        case_name = case_name.replace("single-objective", "soo")
-    else:
-        processing_method = process_moo_results
-        case_name = case_name.replace("multi-objective", "moo")
-
-    problem, _ = load_optimization_config(case)
-    results = load_optimization_results(case)
-
-    if variable_units is None:
-        variable_units = {
-            rf"{var_name}": r"\text{{}}"
-            for var_name in problem.variable_names
-        }
-
-    *figures, table = processing_method(
-        results,
-        variable_units,
-        **processing_kwargs or {},
+    fig_chrom_caption = (
+        f"Chromatograms of Pareto edge points of {objective} optimization of "
+        f"{operating_mode} process with {separation_problem} component system."
     )
 
-    default_embed_kwargs = {
-        "caption": "Objective function values.",
-    }
-    default_embed_kwargs.update(embed_kwargs)
-    fig_objectives_embedded = embed_figure_in_directive(
+    # --- Table ---
+    # Update args for table
+    x_best = np.vstack((x_best, x_meta))
+    fractionators = fractionators.ravel().tolist()
+    fractionators.append(frac_meta)
+
+    # Build table
+    table = setup_moo_results_table(
         case,
-        "figures/objectives.png",
-        f"{study.name}_{case_name}_objectives",
-        **default_embed_kwargs,
+        optimization_results,
+        list(zip(x_best, fractionators)),
+        variables,
     )
 
-    return *figures, table, fig_objectives_embedded
+    return (
+        (fig_objectives, axs_objectives, fig_objectives_caption),
+        (fig_chrom, axs_chrom, fig_chrom_caption),
+        table,
+    )

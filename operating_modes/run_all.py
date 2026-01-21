@@ -1,9 +1,10 @@
+from collections import defaultdict
 from dataclasses import dataclass, asdict
 from datetime import date
 from itertools import product
 import os
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from cadetrdm import Case, Options, ProjectRepo
 
@@ -25,7 +26,7 @@ class FractionationOptions:
     ranking: Literal["equal"] | list[int] = "equal"
     allow_empty_fractions: bool = True
     ignore_failed: bool = False
-    optimizer: Literal["COBYLA", "COBYQA"] | None = None
+    optimizer: Literal["COBYLA", "COBYQA"] = "COBYLA"
 
 
 @dataclass
@@ -114,7 +115,7 @@ def setup_options(
         ranking=ranking,
         allow_empty_fractions=kwargs.get("allow_empty_fractions", True),
         ignore_failed=kwargs.get("ignore_failed", False),
-        optimizer=kwargs.get("fractionation_optimizer", None),
+        optimizer=kwargs.get("fractionation_optimizer", "COBYLA"),
     )
 
     optimization_options = OptimizationOptions(
@@ -122,7 +123,7 @@ def setup_options(
         cadet_options=cadet_options,
         fractionation_options=fractionation_opts,
         add_meta_score=kwargs.get("add_meta_score", True),
-        transform_variables=kwargs.get("transform_variables", None),
+        transform_variables=kwargs.get("transform_variables", "auto"),
         _cache_directory_base=kwargs.get("cache_directory_base", None),
         _temp_directory_base=kwargs.get("temp_directory_base", None),
     )
@@ -206,8 +207,19 @@ def iterate_cases(
     return cases
 
 
-if __name__ == "__main__":
+def setup_cases(
+    work_dir: os.PathLike | None = None,
+    **kwargs: Any,
+) -> list[Case]:
+    """
+    Set up cases based on the current environment and parameters.
 
+    Args:
+        work_dir: Working directory for the simulation.
+        kwargs: Additional kwargs for iterate cases.
+    Returns:
+        List of cases.
+    """
     username = os.getlogin()
     if username == 'jo':
         temp_directory_base = Path('/dev/shm/CADET-Process/tmp')
@@ -224,9 +236,6 @@ if __name__ == "__main__":
             )
     else:
         raise Exception("Unknown environment.")
-
-    # Set up working directory
-    work_dir = Path.home() / "studies" / "diss_operating_modes"
 
     operating_modes = [
         "batch-elution",
@@ -247,7 +256,7 @@ if __name__ == "__main__":
                 "operating_mode": "batch-elution",
                 "separation_problem": "ternary",
                 "objective": objective,
-                }
+            }
             for objective in objectives
         ],
         *[
@@ -256,7 +265,7 @@ if __name__ == "__main__":
                 "separation_problem": "ternary",
                 "objective": objective,
                 "ranking": [1, 1, 0],
-                }
+            }
             for objective in objectives
         ],
         *[
@@ -264,27 +273,31 @@ if __name__ == "__main__":
                 "operating_mode": "serial-columns",
                 "objective": objective,
                 "ranking": [1, 1, 0],
-                }
+            }
             for objective in objectives
         ],
     ]
 
-    cases = iterate_cases(
+    if work_dir is None:
+        work_dir = Path("./")
+
+    return iterate_cases(
         operating_modes,
         objectives,
         special_cases=special_cases,
-        work_dir=work_dir,
+        **kwargs,
+    )
+
+
+if __name__ == "__main__":
+    cases = setup_cases(
         push=True,
+        load=True,
         debug=False,
-        load=False,
-        install_path=install_path,
         fractionation_optimizer="COBYLA",
         ignore_failed=False,
         transform_variables="auto",
         add_meta_score=True,
-        temp_directory_base=temp_directory_base,
-        cache_directory_base=cache_directory_base,
-        progress_frequency=None,
     )
 
     run = True

@@ -8,10 +8,7 @@ from CADETProcess.processModel import (
     LumpedRateModelWithPores,
 )
 
-from operating_modes.et_simulator import (
-    convert_binding_to_linear,
-    convert_column_to_lrm,
-)
+from operating_modes.et_simulator import convert_column_to_lrm
 
 
 c_feed = 10
@@ -21,7 +18,6 @@ flow_rate = 60e-6/60
 def setup_binding_model(
     separation_problem: Literal["standard", "difficult", "simple", "ternary"],
     is_kinetic: bool = False,
-    convert_to_linear: bool = False,
 ) -> BindingBaseClass:
     """
     Create a binding model for the given scenario.
@@ -30,9 +26,6 @@ def setup_binding_model(
     ----------
     separation_problem : Literal["standard", "difficult", "simple", "ternary"]
         The type of binding model to create.
-    convert_to_linear : bool, optional
-        If True, convert the model to a linear binding model with equivalent
-        Henry coefficients. The default is False.
 
     Returns
     -------
@@ -68,15 +61,12 @@ def setup_binding_model(
             binding_model.desorption_rate = [1, 1, 1]
             binding_model.capacity = [100, 100, 200]
 
-    if convert_to_linear:
-        binding_model = convert_binding_to_linear(binding_model)
-
     return binding_model
 
 
 def setup_column(
     binding_model: BindingBaseClass,
-    apply_et_assumptions: bool = False,
+    convert_to_lrm: bool = False,
 ) -> ChromatographicColumnBase:
     """
     Setup a chromatographic column for process simulation.
@@ -85,12 +75,8 @@ def setup_column(
     ----------
     binding_model : BindingBaseClass
         The binding model to use for the column.
-    apply_et_assumptions : bool, optional
-        If True, apply equilibrium theory assumptions for validation:
-        - LRM with equivalent total porosity
-        - Axial dispersion = 0
-        - Linear binding model in rapid equilibrium with equivalent Henry
-          coefficients.
+    convert_to_lrm : bool, default=False
+        If True, convert column model to LumpedRateModelWithoutPores
 
     Returns
     -------
@@ -114,10 +100,7 @@ def setup_column(
     # Transport
     column.axial_dispersion = 1e-6
 
-    # Equilibrium theory assumptions
-    if apply_et_assumptions:
-        binding_model = convert_binding_to_linear(binding_model)
-        column.binding_model = binding_model
+    if convert_to_lrm:
         column = convert_column_to_lrm(column)
 
     return column

@@ -80,15 +80,16 @@ def convert_binding_to_linear(
 ) -> Linear:
     """Convert binding model to Linear."""
     linear = Linear(binding_model.component_system)
+    linear.is_kinetic = binding_model.is_kinetic
     linear.adsorption_rate = binding_model.henry_coefficient
     linear.desorption_rate = binding_model.desorption_rate
-    linear.is_kinetic = False
 
     return linear
 
 
-def apply_et_assumptions(
+def apply_et_assumptions_to_process(
     process: Process,
+    convert_to_linear: bool = True,
     ncol: int = 500,
     weno_order: int = 2,
 ) -> Process:
@@ -113,6 +114,8 @@ def apply_et_assumptions(
             column.binding_model.is_kinetic = False
         column.discretization.ncol = ncol
         column.discretization.weno_parameters.weno_order = weno_order
+        if convert_to_linear:
+            column.binding_model = convert_binding_to_linear(column.binding_model)
     return process
 
 
@@ -227,7 +230,7 @@ class ETSimulator:
         if not isinstance(process, self.supported_processes):
             raise TypeError(f"Unexpected Process. Supported: {self.supported_processes}")
 
-        process = apply_et_assumptions(process)
+        process = apply_et_assumptions_to_process(process, convert_to_linear=True)
 
         for eluent in process.flow_sheet.eluent_inlets:
             if not np.all(eluent.c == 0):
@@ -773,7 +776,7 @@ def compare_cadet_with_et(
     **kwargs,
 ) -> tuple[plt.Figure, plt.Axes] | tuple[plt.Figure, plt.Axes, plt.Figure, plt.Axes]:
     """Compare of CADET with analytical solution using equilibrium theory."""
-    process = apply_et_assumptions(process)
+    process = apply_et_assumptions_to_process(process)
 
     cadet_simulator = Cadet()
     cadet_simulator.time_resolution = 0.1

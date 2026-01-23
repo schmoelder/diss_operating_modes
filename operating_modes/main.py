@@ -10,6 +10,7 @@ from cadetrdm import Options, ProjectRepo, tracks_results
 from CADETProcess import settings
 from CADETProcess.processModel import Process
 
+from operating_modes.et_simulator import apply_et_assumptions_to_process
 from operating_modes.model_parameters import (
     setup_binding_model,
     setup_column,
@@ -26,15 +27,21 @@ def setup_process(
     case_module: ModuleType,
     separation_problem: Literal["standard", "difficult", "simple", "ternary"],
     apply_et_assumptions: bool = False,
+    convert_to_linear: bool = False,
 ) -> Process:
     """Set up and return a configured `Process` object."""
     binding_model = setup_binding_model(separation_problem)
-    column = setup_column(binding_model, apply_et_assumptions)
+    column = setup_column(binding_model, convert_to_lrm=apply_et_assumptions)
 
     process = case_module.setup_process(column)
 
-    return process
+    if apply_et_assumptions:
+        apply_et_assumptions_to_process(
+            process,
+            convert_to_linear=convert_to_linear
+        )
 
+    return process
 
 
 # %% Setup OptimizationProblem

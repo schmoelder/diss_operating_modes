@@ -1,5 +1,9 @@
+from CADETProcess import plotting
 from CADETProcess.modelBuilder import SerialColumns
 from CADETProcess.processModel import ChromatographicColumnBase
+from CADETProcess.simulationResults import SimulationResults
+import matplotlib.pyplot as plt
+import numpy.typing as npt
 
 from operating_modes.model_parameters import(
     c_feed,
@@ -92,3 +96,15 @@ def setup_variable_dependencies() -> list[dict]:
         "transform": lambda x: 0.6 - x,
     })
     return variable_dependencies
+
+
+def plot_results(
+    simulation_results: SimulationResults,
+) -> tuple[plt.Figure, npt.NDArray[plt.Axes]]:
+    """Plot simulation results."""
+    fig, axs = plotting.setup_figure(ncols=3, scale_with_subplots=True)
+    simulation_results.solution.column_1.outlet.plot(ax=axs[0])
+    simulation_results.solution.outlet_1.inlet.plot(ax=axs[1])
+    simulation_results.solution.outlet_2.inlet.plot(ax=axs[2])
+
+    return fig, axs

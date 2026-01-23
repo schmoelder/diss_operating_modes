@@ -1,7 +1,11 @@
 from typing import Literal
 
+from CADETProcess import plotting
 from CADETProcess.modelBuilder import CLR
 from CADETProcess.processModel import ChromatographicColumnBase
+from CADETProcess.simulationResults import SimulationResults
+import matplotlib.pyplot as plt
+import numpy.typing as npt
 
 from operating_modes.model_parameters import(
     c_feed,
@@ -61,3 +65,14 @@ def setup_variable_dependencies() -> list[dict]:
     """Setup variable dependencies."""
     variable_dependencies = []
     return variable_dependencies
+
+
+def plot_results(
+    simulation_results: SimulationResults,
+) -> tuple[plt.Figure, npt.NDArray[plt.Axes]]:
+    """Plot simulation results."""
+    fig, axs = plotting.setup_figure(ncols=2, scale_with_subplots=True)
+    simulation_results.solution.column.outlet.plot(ax=axs[0])
+    simulation_results.solution.outlet.outlet.plot(ax=axs[1])
+
+    return fig, axs

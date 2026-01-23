@@ -148,7 +148,7 @@ def setup_options(
 
     options.name = name
     options.commit_message = f"{name}_{str(date.today())}"
-    options.branch_prefix = name
+    options.branch_prefix = name.replace(" ", "_")
     options.debug = debug
     options.push = push
 

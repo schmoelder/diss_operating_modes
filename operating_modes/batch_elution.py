@@ -1,14 +1,9 @@
 from typing import Literal
 
-from CADETProcess.processModel import (
-    ChromatographicColumnBase,
-    ComponentSystem,
-    Langmuir,
-)
 from CADETProcess.modelBuilder import BatchElution
+from CADETProcess.processModel import ChromatographicColumnBase
 
 from operating_modes.model_parameters import(
-    setup_column,
     c_feed,
     flow_rate,
 )

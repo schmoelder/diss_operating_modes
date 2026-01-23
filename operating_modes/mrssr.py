@@ -1,21 +1,16 @@
 from typing import Literal
 
-from CADETProcess.processModel import (
-    ComponentSystem,
-    BindingBaseClass,
-    Langmuir,
-)
 from CADETProcess.modelBuilder import MRSSR
+from CADETProcess.processModel import ChromatographicColumnBase
 
 from operating_modes.model_parameters import(
-    setup_column,
     c_feed,
     flow_rate,
 )
 
 
 def setup_process(
-    column: BindingBaseClass,
+    column: ChromatographicColumnBase,
 ) -> MRSSR:
     """Setup MR-SSR process."""
     return MRSSR(

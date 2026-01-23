@@ -1,19 +1,14 @@
-from CADETProcess.processModel import (
-    ComponentSystem,
-    BindingBaseClass,
-    Langmuir,
-)
 from CADETProcess.modelBuilder import SerialColumns
+from CADETProcess.processModel import ChromatographicColumnBase
 
 from operating_modes.model_parameters import(
-    setup_column,
     c_feed,
     flow_rate,
 )
 
 
 def setup_process(
-    column: BindingBaseClass,
+    column: ChromatographicColumnBase,
 ) -> SerialColumns:
     """Setup serial-columns process."""
     return SerialColumns(

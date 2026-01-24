@@ -1,3 +1,5 @@
+from typing import Literal
+
 from CADETProcess import plotting
 from CADETProcess.modelBuilder import SerialColumns
 from CADETProcess.processModel import ChromatographicColumnBase
@@ -27,23 +29,25 @@ def setup_process(
     )
 
 
-def setup_variables() -> list[dict] | None:
+def setup_variables(
+    transform: Literal["auto", "linear", "log"] | None = None,
+)-> list[dict]:
     """Setup optimization variables."""
     variables = []
     variables.append({
         "name": "cycle_time",
         "lb": 10, "ub": 600,
-        "transform": "auto"
+        "transform": transform,
     })
     variables.append({
         "name": "feed_duration.time",
         "lb": 10, "ub": 100,
-        "transform": "auto"
+        "transform": transform,
     })
     variables.append({
         "name": "serial_off.time",
         "lb": 0, "ub": 600,
-        "transform": "auto"
+        "transform": transform,
     })
     variables.append({
         "name": "serial_on.time",

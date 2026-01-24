@@ -188,7 +188,7 @@ def iterate_cases(
     # Set up individual study."""
     study = ProjectRepo(
         work_dir,
-        url="git@github.com/schmoelder/diss_operating_modes.git",
+        url="git@github.com:schmoelder/diss_operating_modes.git",
         branch="main",
         package_dir="operating_modes"
     )

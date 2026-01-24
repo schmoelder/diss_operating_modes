@@ -43,7 +43,7 @@ def setup_variables(
         "transform": transform,
     })
     variables.append({
-        "name": "recycle_off.time",
+        "name": "recycle_off_output_state.time",
         "lb": 10, "ub": 3000,
         "transform": transform,
     })

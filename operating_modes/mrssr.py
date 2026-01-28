@@ -61,36 +61,24 @@ def setup_variables(
 def setup_linear_constraints() -> list[dict]:
     """Setup linear constraints."""
     linear_constraints = []
-    # Ensure recycling starts after injection (could be removed later)
-    linear_constraints.append({
-        "opt_vars":  ['feed_duration.time', 'recycle_on.time'],
-        "lhs": [1, -1],
-        "b": 0.0,
-    })
     # Ensure recycle_off is after recycle_on
     linear_constraints.append({
-        "opt_vars": ['recycle_on.time', 'recycle_off.time'],
+        "opt_vars": ["recycle_on.time", "recycle_off.time"],
         "lhs": [1, -1],
         "b": 0.0,
     })
-    # Ensure recycling is shorter than cycle_time
+    # Ensure total injection is shorter than cycle time
     linear_constraints.append({
-        "opt_vars": ['recycle_off.time', 'cycle_time'],
-        "lhs": [1, -1],
+        "opt_vars": [
+            "feed_duration.time",
+            "recycle_off.time",
+            "recycle_on.time",
+            "cycle_time",
+        ],
+        "lhs": [1, 1, -1, -1],
         "b": 0.0,
     })
-    # Ensure recycling is shorter than injection
-    linear_constraints.append({
-        "opt_vars": ['feed_duration.time', 'recycle_off.time', 'recycle_on.time'],
-        "lhs": [-1, 1, -1],
-        "b": 0.0,
-    })
-    # Ensure injection is shorter than cycle time
-    linear_constraints.append({
-        "opt_vars": ["feed_duration.time", "cycle_time"],
-        "lhs": [1, -1],
-        "b": 0.0,
-    })
+
     return linear_constraints
 
 

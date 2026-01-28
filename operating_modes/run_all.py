@@ -144,7 +144,8 @@ def setup_options(
 
     name = f"{name}_{objective}"
     if ranking != "equal":
-        name = f"{name}_{ranking}"
+        ranking_str = str(ranking).replace(", ", "-").replace("[", "").replace("]", "")
+        name = f"{name}_{ranking_str}"
 
     options.name = name
     options.commit_message = f"{name}_{str(date.today())}"

@@ -64,7 +64,9 @@ def setup_options(
     study: ProjectRepo,
     operating_mode: Literal["batch-elution", "CLR", "flip-flop", "MRSSR", "serial-columns"],
     objective: Literal["single-objective", "multi-objective", "multi-objective-per-component"],
-    separation_problem: Literal["standard", "difficult", "simple", "ternary"] | None = None,
+    separation_problem: Literal["standard", "difficult", "simple", "ternary"],
+    convert_to_linear: bool = False,
+    apply_et_assumptions: bool = False,
     ranking: Literal["equal"] | list[int] = "equal",
     load: bool = False,
     push: bool = True,
@@ -85,14 +87,18 @@ def setup_options(
         **kwargs: Additional arguments for other options.
     """
     name = f"{operating_mode}"
-    if separation_problem is not None:
+    if separation_problem:
         name = f"{name}_{separation_problem}"
+    if convert_to_linear:
+        name = f"{name}_linear"
+    if apply_et_assumptions:
+        name = f"{name}_et"
 
     process_options = ProcessOptions(
         operating_mode=operating_mode,
         separation_problem=separation_problem,
-        apply_et_assumptions=kwargs.get("apply_et_assumptions", False),
-        convert_to_linear=kwargs.get("convert_to_linear", False),
+        convert_to_linear=convert_to_linear,
+        apply_et_assumptions=apply_et_assumptions,
     )
 
     cadet_options = CadetOptions(

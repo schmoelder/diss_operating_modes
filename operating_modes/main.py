@@ -95,7 +95,8 @@ def setup_optimization_problem_from_options(
 ) -> ProcessOptimization:
     """Set up the optimization problem and optimizer from options."""
     options = copy.deepcopy(options)
-    operating_mode = options["process_options"].pop("operating_mode").replace("-", "_")
+    operating_mode = options["process_options"].pop("operating_mode")
+    operating_mode = operating_mode.lower().replace("-", "_")
     case_module = importlib.import_module(f"operating_modes.{operating_mode}")
 
     process = setup_process(

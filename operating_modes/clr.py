@@ -53,11 +53,19 @@ def setup_variables(
 def setup_linear_constraints() -> list[dict]:
     """Setup linear constraints."""
     linear_constraints = []
+    # Ensure recycling starts after injection
     linear_constraints.append({
-        "opt_vars": ["feed_duration.time", "cycle_time"],
+        "opt_vars": ["feed_duration.time", "recycle_off_output_state.time"],
         "lhs": [1, -1],
         "b": 0.0,
     })
+    # Ensure recycling ends before end of cycle
+    linear_constraints.append({
+        "opt_vars": ["recycle_off_output_state.time", "cycle_time"],
+        "lhs": [1, -1],
+        "b": 0.0,
+    })
+
     return linear_constraints
 
 

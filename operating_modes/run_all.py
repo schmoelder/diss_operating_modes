@@ -84,21 +84,9 @@ def setup_options(
         debug: If True, set debug mode for CADET-RDM.
         **kwargs: Additional arguments for other options.
     """
-    # Default binding models per operating mode
-    default_separation_problems = {
-        "batch-elution": "standard",
-        "clr": "standard",
-        "flip-flop": "simple",
-        "mrssr": "standard",
-        "serial-columns": "ternary",
-        "smb": "standard",
-    }
-
     name = f"{operating_mode}"
     if separation_problem is not None:
         name = f"{name}_{separation_problem}"
-
-    separation_problem = separation_problem or default_separation_problems[operating_mode]
 
     process_options = ProcessOptions(
         operating_mode=operating_mode,
@@ -163,54 +151,8 @@ def setup_options(
     return case
 
 
-def iterate_cases(
-    operating_modes: list[str],
-    objectives: list[str],
-    special_cases: list[dict] | None = None,
-    work_dir: os.PathLike = "./",
-    **kwargs,
-) -> list[Case]:
-    """
-    Iterate over all combinations of operating modes and objectives.
-
-    Args:
-        operating_modes: List of operating modes.
-        objectives: List of objectives.
-        special_cases: List of dicts, each defining a special case.
-            Example: [{
-                "operating_mode": "clr",
-                "objective": "multi-objective",
-                "ranking": [1, 1, 0]
-            }]
-        work_dir: Path to store the resul
-        **kwargs: Additional arguments for setup_case.
-
-    Returns:
-        List of Case objects.
-    """
-    # Set up individual study."""
-    study = ProjectRepo(
-        work_dir,
-        url="git@github.com:schmoelder/diss_operating_modes.git",
-        branch="main",
-        package_dir="operating_modes"
-    )
-
-    cases = []
-    special_cases = special_cases or []
-
-    # Standard cases: all modes × all objectives
-    for mode, objective in product(operating_modes, objectives):
-        cases.append(setup_options(study, mode, objective, **kwargs))
-
-    # Special cases: user-defined configurations
-    for case_config in special_cases:
-        cases.append(setup_options(study, **case_config, **kwargs))
-
-    return cases
-
-
 def setup_cases(
+    work_dir: os.PathLike = "./",
     **kwargs: Any,
 ) -> list[Case]:
     """
@@ -221,6 +163,7 @@ def setup_cases(
     Returns:
         List of cases.
     """
+    # Setup environment
     username = os.getlogin()
     if username == 'jo':
         temp_directory_base = Path('/dev/shm/CADET-Process/tmp')
@@ -238,20 +181,45 @@ def setup_cases(
     else:
         raise Exception("Unknown environment.")
 
-    operating_modes = [
-        "batch-elution",
-        "clr",
-        "flip-flop",
-        "mrssr",
-        "serial-columns",
-    ]
+    kwargs["temp_directory_base"] = temp_directory_base
+    kwargs["cache_directory_base"] = cache_directory_base
+    kwargs["install_path"] = install_path
+
+    # Setup project repository
+    study = ProjectRepo(
+        work_dir,
+        url="git@github.com:schmoelder/diss_operating_modes.git",
+        branch="main",
+        package_dir="operating_modes"
+    )
+
+    # Configure case studies
     objectives = [
         "single-objective",
-        "multi-objective",
         "multi-objective-per-component",
     ]
-
-    special_cases = [
+    cases = [
+        # Batch-Elution (standard)
+        *[
+            {
+                "operating_mode": "batch-elution",
+                "separation_problem": "standard",
+                "objective": objective,
+            }
+            for objective in objectives
+        ],
+        # Batch-Elution (linear, ET assumptions)
+        *[
+            {
+                "operating_mode": "batch-elution",
+                "separation_problem": "standard",
+                "convert_to_linear": True,
+                "apply_et_assumptions": True,
+                "objective": objective,
+            }
+            for objective in objectives
+        ],
+        # Batch-Elution (ternary)
         *[
             {
                 "operating_mode": "batch-elution",
@@ -260,34 +228,63 @@ def setup_cases(
             }
             for objective in objectives
         ],
+        # CLR (standard)
         *[
             {
-                "operating_mode": "batch-elution",
-                "separation_problem": "ternary",
+                "operating_mode": "clr",
+                "separation_problem": "standard",
                 "objective": objective,
-                "ranking": [1, 1, 0],
             }
             for objective in objectives
         ],
+        # CLR (difficult)
+        *[
+            {
+                "operating_mode": "clr",
+                "separation_problem": "difficult",
+                "objective": objective,
+            }
+            for objective in objectives
+        ],
+        # Flip-Flop (simple)
+        *[
+            {
+                "operating_mode": "flip-flop",
+                "separation_problem": "simple",
+                "convert_to_linear": True,
+                "objective": objective,
+            }
+            for objective in objectives
+        ],
+        # MRSSR (standard)
+        *[
+            {
+                "operating_mode": "mrssr",
+                "separation_problem": "standard",
+                "objective": objective,
+            }
+            for objective in objectives
+        ],
+        # Serial Columns (ternary)
         *[
             {
                 "operating_mode": "serial-columns",
+                "separation_problem": "ternary",
                 "objective": objective,
-                "ranking": [1, 1, 0],
             }
             for objective in objectives
         ],
     ]
 
-    return iterate_cases(
-        operating_modes,
-        objectives,
-        special_cases=special_cases,
-        temp_directory_base=temp_directory_base,
-        cache_directory_base=cache_directory_base,
-        install_path=install_path,
-        **kwargs,
-    )
+    # Setup options for case studies
+    return [
+        setup_options(
+            study,
+            **case_config,
+            **kwargs,
+        )
+        for case_config in cases
+    ]
 
 
 if __name__ == "__main__":
@@ -296,7 +293,7 @@ if __name__ == "__main__":
         load=True,
         debug=False,
         fractionation_optimizer="COBYLA",
-        ignore_failed=False,
+        ignore_failed=True,
         transform_variables="auto",
         add_meta_score=True,
     )

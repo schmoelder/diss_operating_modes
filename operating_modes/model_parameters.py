@@ -8,7 +8,10 @@ from CADETProcess.processModel import (
     LumpedRateModelWithPores,
 )
 
-from operating_modes.et_simulator import convert_column_to_lrm
+from operating_modes.et_simulator import (
+    convert_column_to_lrm,
+    convert_binding_to_linear,
+)
 
 
 c_feed = 10
@@ -18,6 +21,7 @@ flow_rate = 60e-6/60
 def setup_binding_model(
     separation_problem: Literal["standard", "difficult", "simple", "ternary"],
     is_kinetic: bool = False,
+    convert_to_linear: bool = False,
 ) -> BindingBaseClass:
     """
     Create a binding model for the given scenario.
@@ -26,6 +30,10 @@ def setup_binding_model(
     ----------
     separation_problem : Literal["standard", "difficult", "simple", "ternary"]
         The type of binding model to create.
+    is_kinetic : bool, default=False
+        If False, assume rapid equilibrium.
+    convert_to_linear : bool, default=False
+        If True, convert binding model to linear isotherm.
 
     Returns
     -------
@@ -56,10 +64,12 @@ def setup_binding_model(
             binding_model.desorption_rate = [1, 1]
             binding_model.capacity = [100, 100]
         case "ternary":
-            binding_model.is_kinetic = is_kinetic
             binding_model.adsorption_rate = [0.01, 0.015, 0.03]
             binding_model.desorption_rate = [1, 1, 1]
             binding_model.capacity = [100, 100, 200]
+
+    if convert_to_linear:
+        binding_model = convert_binding_to_linear(binding_model)
 
     return binding_model
 

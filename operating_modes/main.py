@@ -30,16 +30,16 @@ def setup_process(
     convert_to_linear: bool = False,
 ) -> Process:
     """Set up and return a configured `Process` object."""
-    binding_model = setup_binding_model(separation_problem)
+    binding_model = setup_binding_model(
+        separation_problem,
+        convert_to_linear=convert_to_linear,
+    )
     column = setup_column(binding_model, convert_to_lrm=apply_et_assumptions)
 
     process = case_module.setup_process(column)
 
     if apply_et_assumptions:
-        apply_et_assumptions_to_process(
-            process,
-            convert_to_linear=convert_to_linear
-        )
+        apply_et_assumptions_to_process(process)
 
     return process
 

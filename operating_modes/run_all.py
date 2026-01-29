@@ -15,6 +15,7 @@ from cadetrdm import Case, Options, ProjectRepo
 class ProcessOptions:
     operating_mode: Literal["batch-elution", "clr", "flip-flop", "mrssr", "serial-columns"]
     separation_problem: Literal["standard", "difficult", "simple", "ternary"]
+    convert_to_linear: bool = False
     apply_et_assumptions: bool = False
 
 
@@ -103,6 +104,7 @@ def setup_options(
         operating_mode=operating_mode,
         separation_problem=separation_problem,
         apply_et_assumptions=kwargs.get("apply_et_assumptions", False),
+        convert_to_linear=kwargs.get("convert_to_linear", False),
     )
 
     cadet_options = CadetOptions(

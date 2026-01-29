@@ -13,7 +13,7 @@ from cadetrdm import Case, Options, ProjectRepo
 
 @dataclass
 class ProcessOptions:
-    operating_mode: Literal["batch-elution", "clr", "flip-flop", "mrssr", "serial-columns"]
+    operating_mode: Literal["batch-elution", "CLR", "flip-flop", "MRSSR", "serial-columns"]
     separation_problem: Literal["standard", "difficult", "simple", "ternary"]
     convert_to_linear: bool = False
     apply_et_assumptions: bool = False
@@ -62,7 +62,7 @@ class OptimizerOptions:
 
 def setup_options(
     study: ProjectRepo,
-    operating_mode: Literal["batch-elution", "clr", "flip-flop", "mrssr", "serial-columns"],
+    operating_mode: Literal["batch-elution", "CLR", "flip-flop", "MRSSR", "serial-columns"],
     objective: Literal["single-objective", "multi-objective", "multi-objective-per-component"],
     separation_problem: Literal["standard", "difficult", "simple", "ternary"] | None = None,
     ranking: Literal["equal"] | list[int] = "equal",
@@ -231,7 +231,7 @@ def setup_cases(
         # CLR (standard)
         *[
             {
-                "operating_mode": "clr",
+                "operating_mode": "CLR",
                 "separation_problem": "standard",
                 "objective": objective,
             }
@@ -240,7 +240,7 @@ def setup_cases(
         # CLR (difficult)
         *[
             {
-                "operating_mode": "clr",
+                "operating_mode": "CLR",
                 "separation_problem": "difficult",
                 "objective": objective,
             }
@@ -259,7 +259,7 @@ def setup_cases(
         # MRSSR (standard)
         *[
             {
-                "operating_mode": "mrssr",
+                "operating_mode": "MRSSR",
                 "separation_problem": "standard",
                 "objective": objective,
             }

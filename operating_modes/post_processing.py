@@ -58,7 +58,7 @@ metrics = {
 # %% Setup cases
 
 def get_cases_by_operating_mode(
-    operating_mode: Literal["batch-elution", "clr", "flip-flop", "mrssr", "serial-columns"],
+    operating_mode: Literal["batch-elution", "CLR", "flip-flop", "MRSSR", "serial-columns"],
     index_by_name: bool = False,
     **kwargs: Any,
 ) -> list[Case]:

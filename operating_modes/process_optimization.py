@@ -236,7 +236,7 @@ class ProcessOptimization(OptimizationProblem):
                     if frac_opt_i is None:
                         continue
 
-                    kpi = KPI(ranking)
+                    kpi = KPI(ranking=i)
                     self.add_objective(
                         kpi,
                         name=f"{kpi}_{i}",

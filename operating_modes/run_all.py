@@ -103,7 +103,7 @@ def setup_options(
 
     cadet_options = CadetOptions(
         install_path=kwargs.get("install_path"),
-        use_dll=kwargs.get("use_dll"),
+        use_dll=kwargs.get("use_dll", True),
     )
 
     fractionation_opts = FractionationOptions(

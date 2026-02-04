@@ -135,7 +135,7 @@ def main(
         optimization_problem,
         save_results=True,
         use_checkpoint=False,
-        results_directory=repo.output_path / options.name,
+        results_directory=repo.output_path / "results",
     )
 
     return results

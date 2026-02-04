@@ -107,7 +107,7 @@ def load_optimization_results(
     if not results_path:
         raise FileNotFoundError("Could not find matching results.")
     optimization_problem, optimizer = load_optimization_config(case)
-    checkpoint_path = results_path / case.name / "final.h5"
+    checkpoint_path = results_path / "results" / "final.h5"
     optimization_results = OptimizationResults(optimization_problem, optimizer)
     optimization_results.load_results(checkpoint_path)
     return optimization_results
@@ -301,7 +301,7 @@ def embed_figure_in_directive(
 ) -> str:
     """Format figure to embed it in MyST figure directive."""
     results_path = case.load(**load_kwargs or {})
-    results_dir = results_path / case.name
+    results_dir = results_path / "results"
     relative_results_dir = results_dir.relative_to(Path.cwd(), walk_up=True)
 
     figure_path = relative_results_dir / figure_path

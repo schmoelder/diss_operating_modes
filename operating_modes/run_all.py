@@ -27,6 +27,7 @@ class FractionationOptions:
     ranking: Literal["equal"] | list[int] = "equal"
     allow_empty_fractions: bool = True
     ignore_failed: bool = False
+    scale_trust_radius: bool = True
     optimizer: Literal["COBYLA", "COBYQA"] = "COBYLA"
 
 
@@ -111,6 +112,7 @@ def setup_options(
         ranking=ranking,
         allow_empty_fractions=kwargs.get("allow_empty_fractions", True),
         ignore_failed=kwargs.get("ignore_failed", False),
+        scale_trust_radius=kwargs.get("scale_trust_radius", True),
         optimizer=kwargs.get("fractionation_optimizer", "COBYLA"),
     )
 
@@ -300,6 +302,7 @@ if __name__ == "__main__":
         debug=False,
         fractionation_optimizer="COBYLA",
         ignore_failed=True,
+        scale_trust_radius=True,
         transform_variables="auto",
         add_meta_score=True,
     )

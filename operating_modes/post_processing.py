@@ -21,7 +21,9 @@ import numpy as np
 
 import sys; sys.path.insert(0, "../")
 from operating_modes.run_all import setup_cases
-from operating_modes.main import setup_optimization_problem_from_options, setup_optimizer
+from operating_modes.main import (
+    setup_optimization_problem_from_options, setup_optimizer
+)
 
 
 # %% Utils
@@ -424,8 +426,9 @@ def process_soo_results(
     case: Case,
     variables: dict | None = None,
     load_kwargs: dict | None = None,
-):
-    """Process multi-objective optimization results."""
+    return_results: bool = False,
+) -> tuple[tuple, tuple, str] | tuple[tuple, tuple, str, OptimizationResults]:
+    """Process single-objective optimization results."""
     operating_mode = case.options.process_options.operating_mode
     separation_problem = case.options.process_options.separation_problem
     objective = case.options.optimization_options.objective
@@ -476,10 +479,18 @@ def process_soo_results(
         variables,
     )
 
+    if not return_results:
+        return (
+            (fig_objectives, axs_objectives, fig_objectives_caption),
+            (fig_chrom, ax_chrom, fig_chrom_caption),
+            table,
+        )
+
     return (
         (fig_objectives, axs_objectives, fig_objectives_caption),
         (fig_chrom, ax_chrom, fig_chrom_caption),
         table,
+        optimization_results,
     )
 
 
@@ -598,7 +609,8 @@ def process_moo_results(
     variables: dict | None = None,
     load_kwargs: dict | None = None,
     use_population_all: bool = True,
-):
+    return_results: bool = False,
+) -> tuple[tuple, tuple, str] | tuple[tuple, tuple, str, OptimizationResults]:
     """Process multi-objective optimization results."""
     operating_mode = case.options.process_options.operating_mode
     separation_problem = case.options.process_options.separation_problem
@@ -715,8 +727,16 @@ def process_moo_results(
         variables,
     )
 
+    if not return_results:
+        return (
+            (fig_objectives, axs_objectives, fig_objectives_caption),
+            (fig_chrom, axs_chrom, fig_chrom_caption),
+            table,
+        )
+
     return (
         (fig_objectives, axs_objectives, fig_objectives_caption),
         (fig_chrom, axs_chrom, fig_chrom_caption),
         table,
+        optimization_results,
     )

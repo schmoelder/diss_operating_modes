@@ -3,9 +3,9 @@
   "is_output_repo": false,
   "project_uuid": "47f74953-a3ed-42d4-a03f-84c757d51fad",
   "output_uuid": "f6c048f3-90dd-4bd6-bb9e-45122a854862",
-  "cadet_rdm_version": "1.1.0",
+  "cadet_rdm_version": "1.1.1",
   "output_remotes": {
-    "output_folder_name": "output",
+    "output_directory_name": "output",
     "output_remotes": {
       "origin": "git@github.com:schmoelder/diss_operating_modes_output.git"
     }

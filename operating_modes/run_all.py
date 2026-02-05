@@ -54,8 +54,9 @@ class OptimizationOptions:
 class OptimizerOptions:
     optimizer: Literal["U_NSGA3"] = "U_NSGA3"
     n_cores: int = -4
-    n_max_gen: int = 64
+    n_max_gen: int | None = None
     pop_size: int | None = None
+    n_ref_dirs: int | None = None
     progress_frequency: int | None = None
 
 
@@ -129,8 +130,9 @@ def setup_options(
     optimizer_options = OptimizerOptions(
         optimizer=kwargs.get("optimizer", "U_NSGA3"),
         n_cores=kwargs.get("n_cores", -4),
-        n_max_gen=kwargs.get("n_max_gen", 64),
+        n_max_gen=kwargs.get("n_max_gen", None),
         pop_size=kwargs.get("pop_size", None),
+        n_ref_dirs=kwargs.get("n_ref_dirs", None),
         progress_frequency=kwargs.get("progress_frequency", None),
     )
 

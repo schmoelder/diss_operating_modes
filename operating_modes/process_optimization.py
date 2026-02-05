@@ -346,8 +346,6 @@ def setup_optimizer(
         optimizer = U_NSGA3()
         default_options = {
             "n_cores": -4,
-            "pop_size": optimization_problem.n_variables * 64,
-            "n_max_gen": 64,
             "progress_frequency": None,
         }
     else:

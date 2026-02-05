@@ -292,7 +292,7 @@ class ProcessOptimization(OptimizationProblem):
                     callback,
                     requires=[simulator, frac_opt_i],
                     name=f"plot_fractionation_{i}",
-
+                    frequency=10,
                 )
         else:
             def callback(

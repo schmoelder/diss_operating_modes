@@ -60,7 +60,7 @@ def setup_binding_model(
             binding_model.desorption_rate = [1, 1]
             binding_model.capacity = [100, 100]
         case "difficult":
-            binding_model.adsorption_rate = [0.01, 0.015]
+            binding_model.adsorption_rate = [0.01, 0.011]
             binding_model.desorption_rate = [1, 1]
             binding_model.capacity = [100, 100]
         case "ternary":

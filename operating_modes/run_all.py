@@ -216,7 +216,7 @@ def setup_cases(
             }
             for objective in objectives
         ],
-        # Batch-Elution (linear, ET assumptions)
+        # Batch-Elution (standard, linear, ET assumptions)
         *[
             {
                 "operating_mode": "batch-elution",
@@ -245,16 +245,17 @@ def setup_cases(
             }
             for objective in objectives
         ],
-        # CLR (difficult)
+        # CLR (difficult, linear)
         *[
             {
                 "operating_mode": "CLR",
                 "separation_problem": "difficult",
+                "convert_to_linear": True,
                 "objective": objective,
             }
             for objective in objectives
         ],
-        # Flip-Flop (simple)
+        # Flip-Flop (simple, linear)
         *[
             {
                 "operating_mode": "flip-flop",

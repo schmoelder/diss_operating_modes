@@ -53,6 +53,7 @@ def setup_optimization_problem(
     cadet_options: dict,
     fractionation_options: dict,
     transform_variables: Literal["auto", "linear", "log"] | None,
+    consider_n_comp_in_linear_constraints: bool,
     add_meta_score: bool,
     name: str,
     options_hash: str,
@@ -63,7 +64,9 @@ def setup_optimization_problem(
     variables = case_module.setup_variables(
         transform=transform_variables
     )
-    linear_constraints = case_module.setup_linear_constraints()
+    linear_constraints = case_module.setup_linear_constraints(
+        process.n_comp if consider_n_comp_in_linear_constraints else None
+    )
     variable_dependencies = case_module.setup_variable_dependencies()
 
     # Handle directories

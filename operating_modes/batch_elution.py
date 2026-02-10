@@ -40,13 +40,13 @@ def setup_variables(
     return variables
 
 
-def setup_linear_constraints() -> list[dict]:
+def setup_linear_constraints(n_comp: int | None) -> list[dict]:
     """Setup linear constraints."""
     linear_constraints = []
     # Ensure feed duration is shorter than cycle time
     linear_constraints.append({
         "opt_vars": ["feed_duration.time", "cycle_time"],
-        "lhs": [1, -1],
+        "lhs": [1 if not n_comp else n_comp, -1],
         "b": 0.0,
     })
     return linear_constraints

@@ -55,7 +55,7 @@ def setup_variables(
     return variables
 
 
-def setup_linear_constraints() -> list[dict]:
+def setup_linear_constraints(n_comp: int | None) -> list[dict]:
     """Setup linear constraints."""
     linear_constraints = []
     return linear_constraints

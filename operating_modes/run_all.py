@@ -41,6 +41,7 @@ class OptimizationOptions:
     cadet_options: CadetOptions
     fractionation_options: FractionationOptions
     transform_variables: Literal["auto", "linear", "log"] | None = None
+    consider_n_comp_in_linear_constraints: bool = True
     add_meta_score: bool = True
     _cache_directory_base: os.PathLike | None = None
     _temp_directory_base: os.PathLike | None = None
@@ -121,6 +122,7 @@ def setup_options(
         fractionation_options=fractionation_opts,
         add_meta_score=kwargs.get("add_meta_score", True),
         transform_variables=kwargs.get("transform_variables", "auto"),
+        consider_n_comp_in_linear_constraints=kwargs.get("consider_n_comp_in_linear_constraints", True),
         _cache_directory_base=kwargs.get("cache_directory_base", None),
         _temp_directory_base=kwargs.get("temp_directory_base", None),
     )
@@ -305,6 +307,7 @@ if __name__ == "__main__":
         ignore_failed=True,
         scale_trust_radius=True,
         transform_variables="auto",
+        consider_n_comp_in_linear_constraints=True,
         add_meta_score=True,
     )
 

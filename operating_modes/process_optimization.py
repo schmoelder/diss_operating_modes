@@ -81,6 +81,7 @@ class ProcessOptimization(OptimizationProblem):
     def _setup_simulator(self, cadet_options) -> Cadet:
         process_simulator = Cadet(**cadet_options)
         process_simulator.evaluate_stationarity = True
+        process_simulator.raise_exception_on_max_cycles = True
 
         self.add_evaluator(process_simulator)
 

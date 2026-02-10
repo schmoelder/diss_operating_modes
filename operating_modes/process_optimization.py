@@ -6,6 +6,7 @@ from CADETProcess.fractionation import FractionationOptimizer
 from CADETProcess.processModel import Process
 from CADETProcess.optimization import OptimizationProblem
 from CADETProcess.simulator import Cadet
+from CADETProcess.stationarity import MassBalance
 from CADETProcess.performance import (
     PerformanceProduct,
     Productivity,
@@ -82,6 +83,7 @@ class ProcessOptimization(OptimizationProblem):
         process_simulator = Cadet(**cadet_options)
         process_simulator.evaluate_stationarity = True
         process_simulator.raise_exception_on_max_cycles = True
+        process_simulator.stationarity_evaluator.add_criterion(MassBalance())
 
         self.add_evaluator(process_simulator)
 

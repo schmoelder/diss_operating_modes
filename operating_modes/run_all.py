@@ -33,6 +33,7 @@ class FractionationOptions:
 class CadetOptions:
     install_path: os.PathLike | None = None
     use_dll: bool = True
+    n_cycles_max: int = 100
 
 
 @dataclass
@@ -105,6 +106,7 @@ def setup_options(
     cadet_options = CadetOptions(
         install_path=kwargs.get("install_path"),
         use_dll=kwargs.get("use_dll", True),
+        n_cycles_max=100 if operating_mode == "MRSSR" else 10,
     )
 
     fractionation_opts = FractionationOptions(

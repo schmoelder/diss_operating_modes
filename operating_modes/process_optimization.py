@@ -81,6 +81,7 @@ class ProcessOptimization(OptimizationProblem):
 
     def _setup_simulator(self, cadet_options) -> Cadet:
         process_simulator = Cadet(**cadet_options)
+        process_simulator.time_resolution = 0.5
         process_simulator.evaluate_stationarity = True
         process_simulator.raise_exception_on_max_cycles = True
         process_simulator.stationarity_evaluator.add_criterion(MassBalance())

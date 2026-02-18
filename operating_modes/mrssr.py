@@ -65,7 +65,7 @@ def setup_linear_constraints(n_comp: int | None) -> list[dict]:
     linear_constraints.append({
         "opt_vars": ["recycle_on.time", "recycle_off.time"],
         "lhs": [1, -1],
-        "b": 0.0,
+        "b": 0.1,
     })
     # Ensure total injection is shorter than cycle time
     linear_constraints.append({

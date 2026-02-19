@@ -28,15 +28,17 @@ def setup_process(
 
 
 def setup_variables(
+    include_cycle_time: bool = True,
     transform: Literal["auto", "linear", "log"] | None = None,
 )-> list[dict]:
     """Setup optimization variables."""
     variables = []
-    variables.append({
-        "name": "cycle_time",
-        "lb": 10, "ub": 600,
-        "transform": transform,
-    })
+    if include_cycle_time:
+        variables.append({
+            "name": "cycle_time",
+            "lb": 10, "ub": 600,
+            "transform": transform,
+        })
     variables.append({
         "name": "feed_duration.time",
         "lb": 10, "ub": 300,
@@ -50,7 +52,10 @@ def setup_variables(
     return variables
 
 
-def setup_linear_constraints(n_comp: int | None) -> list[dict]:
+def setup_linear_constraints(
+    include_cycle_time: bool = True,
+    n_comp: int | None = None,
+) -> list[dict]:
     """Setup linear constraints."""
     linear_constraints = []
     # Ensure recycling starts after injection
@@ -59,17 +64,21 @@ def setup_linear_constraints(n_comp: int | None) -> list[dict]:
         "lhs": [1, -1],
         "b": 0.0,
     })
-    # Ensure recycling ends before end of cycle with at least one additional
-    # feed duration for elution
-    linear_constraints.append({
-        "opt_vars": ["recycle_off_output_state.time", "cycle_time", "feed_duration.time"],
-        "lhs": [1, -1, 1],
-        "b": 0.0,
-    })
+    if include_cycle_time:
+        # Ensure recycling ends before end of cycle with at least one additional
+        # feed duration for elution
+        linear_constraints.append({
+            "opt_vars": ["recycle_off_output_state.time", "cycle_time", "feed_duration.time"],
+            "lhs": [1, -1, 1],
+            "b": 0.0,
+        })
+
     return linear_constraints
 
 
-def setup_variable_dependencies() -> list[dict]:
+def setup_variable_dependencies(
+    include_cycle_time: bool = True,
+) -> list[dict]:
     """Setup variable dependencies."""
     variable_dependencies = []
     return variable_dependencies

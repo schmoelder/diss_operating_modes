@@ -41,6 +41,7 @@ class OptimizationOptions:
     objective: Literal["single-objective", "multi-objective", "multi-objective-per-component"]
     cadet_options: CadetOptions
     fractionation_options: FractionationOptions
+    include_cycle_time: bool = True
     transform_variables: Literal["auto", "linear", "log"] | None = None
     consider_n_comp_in_linear_constraints: bool = True
     add_meta_score: bool = True
@@ -122,9 +123,10 @@ def setup_options(
         objective=objective,
         cadet_options=cadet_options,
         fractionation_options=fractionation_opts,
-        add_meta_score=kwargs.get("add_meta_score", True),
+        include_cycle_time=kwargs.get("include_cycle_time", False),
         transform_variables=kwargs.get("transform_variables", "linear"),
         consider_n_comp_in_linear_constraints=kwargs.get("consider_n_comp_in_linear_constraints", True),
+        add_meta_score=kwargs.get("add_meta_score", True),
         _cache_directory_base=kwargs.get("cache_directory_base", None),
         _temp_directory_base=kwargs.get("temp_directory_base", None),
     )
@@ -308,6 +310,7 @@ if __name__ == "__main__":
         fractionation_optimizer="COBYLA",
         ignore_failed=True,
         scale_trust_radius=True,
+        include_cycle_time=True,
         transform_variables="linear",
         consider_n_comp_in_linear_constraints=True,
         add_meta_score=True,

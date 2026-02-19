@@ -23,15 +23,17 @@ def setup_process(
 
 
 def setup_variables(
+    include_cycle_time: bool = True,
     transform: Literal["auto", "linear", "log"] | None = None,
 )-> list[dict]:
     """Setup optimization variables."""
     variables = []
-    variables.append({
-        "name": "cycle_time",
-        "lb": 10, "ub": 600,
-        "transform": transform,
-    })
+    if include_cycle_time:
+        variables.append({
+            "name": "cycle_time",
+            "lb": 10, "ub": 600,
+            "transform": transform,
+        })
     variables.append({
         "name": "feed_duration.time",
         "lb": 10, "ub": 300,
@@ -40,19 +42,25 @@ def setup_variables(
     return variables
 
 
-def setup_linear_constraints(n_comp: int | None) -> list[dict]:
+def setup_linear_constraints(
+    include_cycle_time: bool = True,
+    n_comp: int | None = None,
+) -> list[dict]:
     """Setup linear constraints."""
     linear_constraints = []
-    # Ensure feed duration is shorter than cycle time
-    linear_constraints.append({
-        "opt_vars": ["feed_duration.time", "cycle_time"],
-        "lhs": [1 if not n_comp else n_comp, -1],
-        "b": 0.0,
-    })
+    if include_cycle_time:
+        # Ensure feed duration is shorter than cycle time
+        linear_constraints.append({
+            "opt_vars": ["feed_duration.time", "cycle_time"],
+            "lhs": [1 if not n_comp else n_comp, -1],
+            "b": 0.0,
+        })
     return linear_constraints
 
 
-def setup_variable_dependencies() -> list[dict]:
+def setup_variable_dependencies(
+    include_cycle_time: bool = True,
+) -> list[dict]:
     """Setup variable dependencies."""
     variable_dependencies = []
     return variable_dependencies

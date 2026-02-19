@@ -49,6 +49,7 @@ def setup_process(
 def setup_optimization_problem(
     case_module: ModuleType,
     process: Process,
+    include_cycle_time: bool,
     objective: str,
     cadet_options: dict,
     fractionation_options: dict,
@@ -62,12 +63,16 @@ def setup_optimization_problem(
 ) -> ProcessOptimization:
     """Set up and return a configured `ProcessOptimization` object."""
     variables = case_module.setup_variables(
-        transform=transform_variables
+        include_cycle_time=include_cycle_time,
+        transform=transform_variables,
     )
     linear_constraints = case_module.setup_linear_constraints(
-        process.n_comp if consider_n_comp_in_linear_constraints else None
+        include_cycle_time,
+        process.n_comp if consider_n_comp_in_linear_constraints else None,
     )
-    variable_dependencies = case_module.setup_variable_dependencies()
+    variable_dependencies = case_module.setup_variable_dependencies(
+        include_cycle_time=include_cycle_time,
+    )
 
     # Handle directories
     if _temp_directory_base is not None:

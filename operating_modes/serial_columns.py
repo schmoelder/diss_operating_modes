@@ -23,8 +23,8 @@ def setup_process(
         c_feed=c_feed,
         flow_rate=flow_rate,
         feed_duration=60,
-        t_serial_on=6.6*60,
-        t_serial_off=8.0*60,
+        t_serial_off=6.6*60,
+        t_serial_on=8.8*60,
         cycle_time=600,
     )
 
@@ -51,18 +51,22 @@ def setup_variables(
     })
     variables.append({
         "name": "serial_on.time",
+    })
+    variables.append({
+        "name": "serial_duration",
+        "evaluation_objects": None,
         "lb": 0, "ub": 600,
-        "transform": "auto"
+        "transform": transform,
     })
     variables.append({
         "name": "flow_sheet.column_1.length",
         "lb": 0.01, "ub": 0.6,
-        "transform": "auto"
+        "transform": transform,
     })
     variables.append({
         "name": "flow_sheet.column_2.length",
         "lb": 0.01, "ub": 0.6,
-        "transform": "auto"
+        "transform": transform,
     })
     return variables
 
@@ -76,16 +80,10 @@ def setup_linear_constraints(n_comp: int | None) -> list[dict]:
         "lhs": [1 if not n_comp else n_comp, -1],
         "b": 0.0,
     })
-    # Ensure serial off is after serial on
+    # Ensure serial duration is shorter than cycle time
     linear_constraints.append({
-        "opt_vars": ["serial_off.time", "serial_on.time"],
-        "lhs": [1, -1],
-        "b": 0.0,
-    })
-    # Ensure serial on is before end of cycle
-    linear_constraints.append({
-        "opt_vars": ["serial_on.time", "cycle_time"],
-        "lhs": [1, -1],
+        "opt_vars": ["serial_duration", "cycle_time"],
+        "lhs": [1],
         "b": 0.0,
     })
     return linear_constraints
@@ -98,6 +96,11 @@ def setup_variable_dependencies() -> list[dict]:
         "dependent_variable": "flow_sheet.column_2.length",
         "independent_variables": ["flow_sheet.column_1.length"],
         "transform": lambda x: 0.6 - x,
+    })
+    variable_dependencies.append({
+        "dependent_variable": "serial_off.time",
+        "independent_variables": ["serial_on.time", "serial_duration"],
+        "transform": lambda *x: sum(x),
     })
     return variable_dependencies
 

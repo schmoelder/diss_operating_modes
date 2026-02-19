@@ -52,6 +52,10 @@ def setup_variables(
     })
     variables.append({
         "name": "recycle_off.time",
+    })
+    variables.append({
+        "name": "recycle_duration",
+        "evaluation_objects": None,
         "lb": 0, "ub": 600,
         "transform": transform,
     })
@@ -61,21 +65,14 @@ def setup_variables(
 def setup_linear_constraints(n_comp: int | None) -> list[dict]:
     """Setup linear constraints."""
     linear_constraints = []
-    # Ensure recycle_off is after recycle_on
-    linear_constraints.append({
-        "opt_vars": ["recycle_on.time", "recycle_off.time"],
-        "lhs": [1, -1],
-        "b": 0.1,
-    })
     # Ensure total injection is shorter than cycle time
     linear_constraints.append({
         "opt_vars": [
             "feed_duration.time",
-            "recycle_off.time",
-            "recycle_on.time",
+            "recycle_duration",
             "cycle_time",
         ],
-        "lhs": [1, 1, -1, -1],
+        "lhs": [1, 1, -1],
         "b": 0.0,
     })
 
@@ -85,6 +82,11 @@ def setup_linear_constraints(n_comp: int | None) -> list[dict]:
 def setup_variable_dependencies() -> list[dict]:
     """Setup variable dependencies."""
     variable_dependencies = []
+    variable_dependencies.append({
+        "dependent_variable": "recycle_off.time",
+        "independent_variables": ["recycle_on.time", "recycle_duration"],
+        "transform": lambda *x: sum(x),
+    })
     return variable_dependencies
 
 

@@ -39,7 +39,7 @@ def setup_variables(
     })
     variables.append({
         "name": "feed_duration.time",
-        "lb": 10, "ub": 100,
+        "lb": 10, "ub": 300,
         "transform": transform,
     })
     variables.append({

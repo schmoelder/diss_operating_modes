@@ -57,6 +57,12 @@ class ProcessOptimization(OptimizationProblem):
 
         simulator = self._setup_simulator(cadet_options)
 
+        if "cycle_time" in self.variable_names:
+            cycle_time_determinator = None
+        else:
+            cycle_time_determinator = CycleTimeDeterminator()
+            self.add_evaluator(cycle_time_determinator)
+
         fractionation_options = self._sync_purity_and_ranking(
             fractionation_options, process.n_comp
         )
@@ -68,6 +74,7 @@ class ProcessOptimization(OptimizationProblem):
         self._add_objectives(
             objective,
             simulator,
+            cycle_time_determinator,
             frac_opt,
             fractionation_options.get("ranking", None),
             process.n_comp,
@@ -85,6 +92,11 @@ class ProcessOptimization(OptimizationProblem):
         process_simulator.evaluate_stationarity = True
         process_simulator.raise_exception_on_max_cycles = True
         process_simulator.stationarity_evaluator.add_criterion(MassBalance())
+        if (
+            "cycle_time" not in self.variable_names
+            and self.evaluation_objects[0].name != "MRSSR"
+        ):
+            process_simulator.evaluate_stationarity = False
 
         self.add_evaluator(process_simulator)
 
@@ -177,37 +189,43 @@ class ProcessOptimization(OptimizationProblem):
         self,
         objective,
         simulator,
+        cycle_time_determinator,
         frac_opt,
         ranking,
         n_comp,
     ):
         """Add objectives to optimization problem."""
+        if cycle_time_determinator:
+            requires = [simulator, cycle_time_determinator, frac_opt]
+        else:
+            requires = [simulator, frac_opt]
+
         if objective == "single-objective":
             performance = PerformanceProduct(ranking=ranking)
             self.add_objective(
                 performance,
-                requires=[simulator, frac_opt],
+                requires=requires,
                 minimize=False,
             )
         elif objective == "multi-objective-ranked":
             productivity = Productivity(ranking=ranking)
             self.add_objective(
                 productivity,
-                requires=[simulator, frac_opt],
+                requires=requires,
                 minimize=False,
             )
 
             recovery = Recovery(ranking=ranking)
             self.add_objective(
                 recovery,
-                requires=[simulator, frac_opt],
+                requires=requires,
                 minimize=False,
             )
 
             eluent_consumption = EluentConsumption(ranking=ranking)
             self.add_objective(
                 eluent_consumption,
-                requires=[simulator, frac_opt],
+                requires=requires,
                 minimize=False,
             )
         elif objective == "multi-objective":
@@ -215,7 +233,7 @@ class ProcessOptimization(OptimizationProblem):
             self.add_objective(
                 productivity,
                 n_objectives=n_comp,
-                requires=[simulator, frac_opt],
+                requires=requires,
                 minimize=False,
             )
 
@@ -223,7 +241,7 @@ class ProcessOptimization(OptimizationProblem):
             self.add_objective(
                 recovery,
                 n_objectives=n_comp,
-                requires=[simulator, frac_opt],
+                requires=requires,
                 minimize=False,
             )
 
@@ -231,20 +249,26 @@ class ProcessOptimization(OptimizationProblem):
             self.add_objective(
                 eluent_consumption,
                 n_objectives=n_comp,
-                requires=[simulator, frac_opt],
+                requires=requires,
                 minimize=False,
             )
         elif objective == "multi-objective-per-component":
             def _add_KPI_objectives(KPI, ranking, frac_opt):
+
                 for i, frac_opt_i in frac_opt.items():
                     if frac_opt_i is None:
                         continue
+
+                    if cycle_time_determinator:
+                        requires = [simulator, cycle_time_determinator, frac_opt_i]
+                    else:
+                        requires = [simulator, frac_opt_i]
 
                     kpi = KPI(ranking=i)
                     self.add_objective(
                         kpi,
                         name=f"{kpi}_{i}",
-                        requires=[simulator, frac_opt_i],
+                        requires=requires,
                         minimize=False,
                     )
             _add_KPI_objectives(Productivity, ranking, frac_opt)
@@ -363,3 +387,92 @@ def setup_optimizer(
         setattr(optimizer, key, value)
 
     return optimizer
+
+
+# %%
+
+import numpy as np
+from CADETProcess.solution import slice_solution
+from CADETProcess.simulationResults import SimulationResults
+
+
+class CycleTimeDeterminator():
+
+    def __init__(self, threshold_percent: float = 1):
+        self.threshold_percent = threshold_percent
+
+    def evaluate(
+        self,
+        simulation_results: SimulationResults,
+    ) -> SimulationResults:
+        """
+        Update simulation results with ideal cycle time.
+
+        The cycle time is determined by finding the first and last element of
+        the solution arrays that are above a threshold concentration.
+
+        Parameters
+        ----------
+        simulation_results : SimulationResults
+            The simulation results to be updated.
+
+        Returns
+        -------
+        SimulationResults
+            The updated simulation results.
+        """
+        # Check if cycle time has alredy been updated
+        if simulation_results.process.cycle_time != simulation_results.time_cycle[-1]:
+            return simulation_results
+
+        simulation_results = copy.deepcopy(simulation_results)
+
+        # Use column outlets to determine cycle time since using the outlet
+        # profiles is not sufficient for processes with internal recycles
+        # (especially for CLR)
+        process = simulation_results.process
+        units_with_binding = process.flow_sheet.units_with_binding
+        unit_solutions = [
+            simulation_results.solution_cycles[unit.name].outlet[-1]
+            for unit in units_with_binding
+        ]
+
+        solutions = np.stack(
+            [sol.solution for sol in unit_solutions],
+            axis=0,
+        )  # shape: (n_chrom, n_time, n_comp)
+
+        c_max = np.max(solutions, axis=(0, 1))  # per component
+        threshold = self.threshold_percent/100 * c_max
+
+        mask_time = np.any(solutions >= threshold, axis=(0, 2))
+        indices = np.flatnonzero(mask_time)
+
+        if indices.size == 0:
+            first, last = 0, solutions.shape[1] - 1
+        else:
+            first, last = indices[0], indices[-1]
+
+        time_first = simulation_results.time_cycle[first]
+        time_last = simulation_results.time_cycle[last]
+        cycle_time = time_last - time_first
+
+        chromatograms_new = [
+            slice_solution(chrom, coordinates={"time": [time_first, time_last]})
+            for chrom in simulation_results.chromatograms
+        ]
+        # Shift time
+        chromatograms_new = [
+            chrom.offset(-time_first)
+            for chrom in chromatograms_new
+        ]
+
+        process.cycle_time = cycle_time
+        simulation_results.chromatograms = chromatograms_new
+
+        return simulation_results
+
+    __call__ = evaluate
+
+    def __str__(self):
+        return "CycleTimeDeterminator"

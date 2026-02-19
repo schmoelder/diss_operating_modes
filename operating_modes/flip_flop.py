@@ -34,8 +34,6 @@ def setup_variables(
     variables = []
     variables.append({
         "name": "cycle_time",
-        "lb": 10, "ub": 3000,
-        "transform": transform,
     })
     variables.append({
         "name": "feed_duration.time",

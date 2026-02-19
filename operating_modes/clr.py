@@ -66,7 +66,6 @@ def setup_linear_constraints(n_comp: int | None) -> list[dict]:
         "lhs": [1, -1, 1],
         "b": 0.0,
     })
-
     return linear_constraints
 
 

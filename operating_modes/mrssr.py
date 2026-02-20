@@ -100,6 +100,9 @@ def plot_results(
 
     return fig, axs
 
+
+# %%
+
 import matplotlib.pyplot as plt
 
 def plot_overlay(

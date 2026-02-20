@@ -105,6 +105,8 @@ def setup_variable_dependencies() -> list[dict]:
     return variable_dependencies
 
 
+# %%
+
 def plot_results(
     simulation_results: SimulationResults,
 ) -> tuple[plt.Figure, npt.NDArray[plt.Axes]]:

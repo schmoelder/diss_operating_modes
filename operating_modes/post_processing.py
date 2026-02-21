@@ -21,6 +21,7 @@ import numpy as np
 
 import sys; sys.path.insert(0, "../")
 from operating_modes.run_all import setup_cases
+from operating_modes.process_optimization import ProcessOptimization
 from operating_modes.main import (
     setup_optimization_problem_from_options, setup_optimizer
 )
@@ -116,38 +117,43 @@ def load_optimization_results(
 # %% Simulate and fractionate results
 
 def simulate_results(
-    optimization_problem: OptimizationProblem,
+    optimization_problem: ProcessOptimization,
     x: list[float],
+    determine_cycle_time: bool = True,
 ) -> SimulationResults:
     """Simulate individual of optimization results."""
     optimization_problem.set_variables(x)
     process = copy.deepcopy(optimization_problem.evaluation_objects[0])
 
-    simulator = optimization_problem.evaluators[0]
-    simulation_results = simulator.evaluate(process)
+    simulation_results = optimization_problem.process_simulator.evaluate(process)
+
+    if determine_cycle_time and optimization_problem.cycle_time_determinator:
+        simulation_results = optimization_problem.cycle_time_determinator.evaluate(
+            simulation_results
+        )
 
     return simulation_results
 
 
 def fractionate_results(
-    optimization_problem: OptimizationProblem,
+    optimization_problem: ProcessOptimization,
     simulation_results: SimulationResults,
-    evaluator_index: int = 1,
+    comp_index: int | None = None,
 ) -> Fractionator:
     """Optimize fractionation."""
-    frac_opt = optimization_problem.evaluators[evaluator_index]
+    frac_opt = optimization_problem.get_fractionator(comp_index)
     return frac_opt.evaluate(simulation_results)
 
 
 def simulate_and_plot(
     optimization_problem: OptimizationProblem,
     x: list[float],
-    fractionator_index: int = 1,
+    comp_index: int | None = None,
 ) -> tuple[plt.Figure, plt.Axes]:
     """Simulate and plot individual of optimization results."""
     simulation_results = simulate_results(optimization_problem, x)
     fractionator = fractionate_results(
-        optimization_problem, simulation_results, fractionator_index
+        optimization_problem, simulation_results, comp_index
     )
 
     fig, ax = fractionator.plot_fraction_signal()
@@ -671,7 +677,7 @@ def process_moo_results(
     for i_metric in range(n_metrics):
         for i_comp in range(n_comp):
             sim_results = simulation_results[i_metric, i_comp]
-            index = i_comp+1 if objective == "multi-objective-per-component" else 1
+            index = i_comp if objective == "multi-objective-per-component" else None
             fractionators[i_metric, i_comp] = fractionate_results(
                 optimization_problem, sim_results, index
             )
@@ -700,7 +706,7 @@ def process_moo_results(
     ax = axs_chrom[-1, 0]
 
     sim_meta = simulate_results(optimization_problem, x_meta)
-    frac_meta = fractionate_results(optimization_problem, sim_meta, -1)
+    frac_meta = fractionate_results(optimization_problem, sim_meta)
     frac_meta.plot_fraction_signal(ax=ax)
     label = f"({string.ascii_lowercase[counter]})"
     plotting.add_text(ax, label)

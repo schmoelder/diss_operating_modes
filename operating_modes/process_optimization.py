@@ -55,36 +55,29 @@ class ProcessOptimization(OptimizationProblem):
             for var_dep in variable_dependencies:
                 self.add_variable_dependency(**var_dep)
 
-        simulator = self._setup_simulator(cadet_options)
+        self._setup_simulator(cadet_options)
 
-        if "cycle_time" in self.variable_names:
-            cycle_time_determinator = None
-        else:
-            cycle_time_determinator = CycleTimeDeterminator()
-            self.add_evaluator(cycle_time_determinator)
+        if "cycle_time" not in self.variable_names:
+            self.add_evaluator(CycleTimeDeterminator())
 
         fractionation_options = self._sync_purity_and_ranking(
             fractionation_options, process.n_comp
         )
 
-        frac_opt = self._setup_fractionation_optimzer(
+        self._setup_fractionation_optimzer(
             objective,
             fractionation_options,
         )
         self._add_objectives(
             objective,
-            simulator,
-            cycle_time_determinator,
-            frac_opt,
             fractionation_options.get("ranking", None),
             process.n_comp,
         )
         if add_meta_score and objective != "single-objective":
             self._add_meta_score(
-                simulator,
-                fractionation_options,
+                fractionation_options.get("ranking", None),
             )
-        self._add_callback(simulator, frac_opt)
+        self._add_callback(objective, process.n_comp)
 
     def _setup_simulator(self, cadet_options) -> Cadet:
         process_simulator = Cadet(**cadet_options)
@@ -100,7 +93,16 @@ class ProcessOptimization(OptimizationProblem):
 
         self.add_evaluator(process_simulator)
 
-        return process_simulator
+    @property
+    def process_simulator(self):
+        return self.evaluators_dict["CADET"]
+
+    @property
+    def cycle_time_determinator(self):
+        try:
+            return self.evaluators_dict["CycleTimeDeterminator"]
+        except KeyError:
+            return
 
     def _sync_purity_and_ranking(
         self,
@@ -152,17 +154,16 @@ class ProcessOptimization(OptimizationProblem):
             case _:
                 optimizer = None
 
-        if objective != "multi-objective-per-component":
-            frac_opt = FractionationOptimizer(
-                optimizer=optimizer
-            )
+        frac_opt = FractionationOptimizer(
+            optimizer=optimizer
+        )
 
-            self.add_evaluator(
-                frac_opt,
-                kwargs=fractionation_options,
-            )
-        else:
-            frac_opt = {}
+        self.add_evaluator(
+            frac_opt,
+            kwargs=fractionation_options,
+        )
+
+        if objective == "multi-objective-per-component":
             purity_required = fractionation_options["purity_required"]
             ranking = fractionation_options["ranking"]
 
@@ -178,54 +179,62 @@ class ProcessOptimization(OptimizationProblem):
                         kwargs=fractionation_options,
                         name=f"FractionationOptimizer_{i}"
                     )
-                else:
-                    frac_opt_i = None
 
-                frac_opt[i] = frac_opt_i
+    def get_fractionator(self, comp_index: int | None=None):
+        if comp_index is None:
+            return self.evaluators_dict["FractionationOptimizer"]
 
-        return frac_opt
+        try:
+            return self.evaluators_dict[f"FractionationOptimizer_{comp_index}"]
+        except KeyError:
+            return
+
+    def get_evaluation_pipeline(self, comp_index: int | None=None):
+        pipeline = [self.process_simulator.evaluator]
+
+        if self.cycle_time_determinator:
+            pipeline.append(self.cycle_time_determinator.evaluator)
+
+        fractionator = self.get_fractionator(comp_index)
+        if not fractionator:
+            raise ValueError(f"Fractionator not configured for component {comp_index}")
+        pipeline.append(fractionator.evaluator)
+
+        return pipeline
 
     def _add_objectives(
         self,
         objective,
-        simulator,
-        cycle_time_determinator,
-        frac_opt,
         ranking,
         n_comp,
     ):
         """Add objectives to optimization problem."""
-        if cycle_time_determinator:
-            requires = [simulator, cycle_time_determinator, frac_opt]
-        else:
-            requires = [simulator, frac_opt]
-
         if objective == "single-objective":
             performance = PerformanceProduct(ranking=ranking)
             self.add_objective(
                 performance,
-                requires=requires,
+                requires=self.get_evaluation_pipeline(),
                 minimize=False,
             )
         elif objective == "multi-objective-ranked":
             productivity = Productivity(ranking=ranking)
             self.add_objective(
                 productivity,
-                requires=requires,
+                requires=self.get_evaluation_pipeline(),
                 minimize=False,
             )
 
             recovery = Recovery(ranking=ranking)
             self.add_objective(
                 recovery,
-                requires=requires,
+                requires=self.get_evaluation_pipeline(),
                 minimize=False,
             )
 
             eluent_consumption = EluentConsumption(ranking=ranking)
             self.add_objective(
                 eluent_consumption,
-                requires=requires,
+                requires=self.get_evaluation_pipeline(),
                 minimize=False,
             )
         elif objective == "multi-objective":
@@ -233,7 +242,7 @@ class ProcessOptimization(OptimizationProblem):
             self.add_objective(
                 productivity,
                 n_objectives=n_comp,
-                requires=requires,
+                requires=self.get_evaluation_pipeline(),
                 minimize=False,
             )
 
@@ -241,7 +250,7 @@ class ProcessOptimization(OptimizationProblem):
             self.add_objective(
                 recovery,
                 n_objectives=n_comp,
-                requires=requires,
+                requires=self.get_evaluation_pipeline(),
                 minimize=False,
             )
 
@@ -249,79 +258,69 @@ class ProcessOptimization(OptimizationProblem):
             self.add_objective(
                 eluent_consumption,
                 n_objectives=n_comp,
-                requires=requires,
+                requires=self.get_evaluation_pipeline(),
                 minimize=False,
             )
         elif objective == "multi-objective-per-component":
-            def _add_KPI_objectives(KPI, ranking, frac_opt):
-
-                for i, frac_opt_i in frac_opt.items():
-                    if frac_opt_i is None:
+            def _add_KPI_objectives(KPI, ranking):
+                for i in range(n_comp):
+                    try:
+                        pipeline = self.get_evaluation_pipeline(comp_index=i)
+                    except ValueError:
                         continue
-
-                    if cycle_time_determinator:
-                        requires = [simulator, cycle_time_determinator, frac_opt_i]
-                    else:
-                        requires = [simulator, frac_opt_i]
 
                     kpi = KPI(ranking=i)
                     self.add_objective(
                         kpi,
                         name=f"{kpi}_{i}",
-                        requires=requires,
+                        requires=pipeline,
                         minimize=False,
                     )
-            _add_KPI_objectives(Productivity, ranking, frac_opt)
-            _add_KPI_objectives(Recovery, ranking, frac_opt)
-            _add_KPI_objectives(EluentConsumption, ranking, frac_opt)
+            _add_KPI_objectives(Productivity, ranking)
+            _add_KPI_objectives(Recovery, ranking)
+            _add_KPI_objectives(EluentConsumption, ranking)
         else:
             raise ValueError(f"Unknown objective: '{objective}'")
 
     def _add_meta_score(
         self,
-        simulator,
-        fractionation_options,
+        ranking,
     ):
         """Add meta score."""
-        try:
-            frac_opt = self.evaluators_dict["FractionationOptimizer"].evaluator
-        except KeyError:
-            frac_opt = self._setup_fractionation_optimzer(
-                "single-objective", fractionation_options,
-            )
-
-        performance = PerformanceProduct(fractionation_options["ranking"])
+        performance = PerformanceProduct(ranking)
         self.add_meta_score(
             performance,
-            requires=[simulator, frac_opt],
+            requires=self.get_evaluation_pipeline(),
             minimize=False,
         )
 
-    def _add_callback(self, simulator, frac_opt):
+    def _add_callback(self, objective, n_comp):
         """Add callback for post-processing."""
-        if isinstance(frac_opt, dict):
-            for i, frac_opt_i in frac_opt.items():
-                if frac_opt_i is None:
+        if objective == "multi-objective-per-component":
+            for i in range(n_comp):
+                try:
+                    pipeline = self.get_evaluation_pipeline(comp_index=i)
+                except ValueError:
                     continue
 
-                def callback(
-                    fractionator,
-                    individual,
-                    evaluation_object,
-                    callbacks_dir
-                ):
-                    name = f"{individual.id_short}_{evaluation_object}_fractionation_{i}"
-                    return fractionator.plot_fraction_signal(
-                        file_name=f"{callbacks_dir}/{name}.png",
-                        show=False
-                    )
-
-                self.add_callback(
-                    callback,
-                    requires=[simulator, frac_opt_i],
-                    name=f"plot_fractionation_{i}",
-                    frequency=10,
+            def callback(
+                fractionator,
+                individual,
+                evaluation_object,
+                callbacks_dir
+            ):
+                name = f"{individual.id_short}_{evaluation_object}_fractionation_{i}"
+                return fractionator.plot_fraction_signal(
+                    file_name=f"{callbacks_dir}/{name}.png",
+                    show=False
                 )
+
+            self.add_callback(
+                callback,
+                requires=pipeline,
+                name=f"plot_fractionation_{i}",
+                frequency=10,
+            )
         else:
             def callback(
                 fractionator,
@@ -335,7 +334,7 @@ class ProcessOptimization(OptimizationProblem):
                 )
 
             self.add_callback(
-                callback, requires=[simulator, frac_opt]
+                callback, requires=self.get_evaluation_pipeline()
             )
 
 

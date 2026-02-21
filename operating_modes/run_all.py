@@ -137,7 +137,7 @@ def setup_options(
         n_max_gen=kwargs.get("n_max_gen", None),
         pop_size=kwargs.get("pop_size", None),
         n_ref_dirs=kwargs.get("n_ref_dirs", None),
-        progress_frequency=kwargs.get("progress_frequency", None),
+        progress_frequency=kwargs.get("progress_frequency", 10),
     )
 
     options = Options({

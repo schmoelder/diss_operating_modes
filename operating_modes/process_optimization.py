@@ -312,7 +312,6 @@ class ProcessOptimization(OptimizationProblem):
                 name = f"{individual.id_short}_{evaluation_object}_fractionation_{i}"
                 return fractionator.plot_fraction_signal(
                     file_name=f"{callbacks_dir}/{name}.png",
-                    show=False
                 )
 
             self.add_callback(
@@ -330,7 +329,6 @@ class ProcessOptimization(OptimizationProblem):
             ):
                 return fractionator.plot_fraction_signal(
                     file_name=f"{callbacks_dir}/{individual.id_short}_{evaluation_object}_fractionation.png",
-                    show=False
                 )
 
             self.add_callback(

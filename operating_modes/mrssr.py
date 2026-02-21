@@ -24,9 +24,9 @@ def setup_process(
         feed_duration=60,
         recycle_on=6.6*60,
         recycle_off=8.0*60,
-        cycle_time=600,
+        cycle_time=1000,
         V_tank=0.001,
-        c_tank_init=0,
+        c_tank_init=c_feed,
     )
 
 
@@ -58,7 +58,7 @@ def setup_variables(
     variables.append({
         "name": "recycle_duration",
         "evaluation_objects": None,
-        "lb": 0, "ub": 600,
+        "lb": 0, "ub": 200,
         "transform": transform,
     })
     return variables
@@ -71,6 +71,12 @@ def setup_linear_constraints(
     """Setup linear constraints."""
     linear_constraints = []
     if include_cycle_time:
+        # Ensure recycling starts before end of cycle
+        linear_constraints.append({
+            "opt_vars": ["recycle_on.time", "cycle_time"],
+            "lhs": [1 if not n_comp else n_comp, -1],
+            "b": 0.0,
+        })
         # Ensure total injection is shorter than cycle time
         linear_constraints.append({
             "opt_vars": [

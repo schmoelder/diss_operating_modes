@@ -25,7 +25,7 @@ def setup_process(
         feed_duration=60,
         t_serial_off=6.6*60,
         t_serial_on=8.8*60,
-        cycle_time=600,
+        cycle_time=1000,
     )
 
 
@@ -43,7 +43,7 @@ def setup_variables(
         })
     variables.append({
         "name": "feed_duration.time",
-        "lb": 10, "ub": 100,
+        "lb": 10, "ub": 300,
         "transform": transform,
     })
     variables.append({
@@ -83,6 +83,12 @@ def setup_linear_constraints(
         # Ensure injection is shorter than cycle time
         linear_constraints.append({
             "opt_vars": ["feed_duration.time", "cycle_time"],
+            "lhs": [1 if not n_comp else n_comp, -1],
+            "b": 0.0,
+        })
+        # Ensure serial off starts before end of cycle
+        linear_constraints.append({
+            "opt_vars": ["serial_off.time", "cycle_time"],
             "lhs": [1 if not n_comp else n_comp, -1],
             "b": 0.0,
         })

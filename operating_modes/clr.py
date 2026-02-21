@@ -23,7 +23,7 @@ def setup_process(
         flow_rate,
         feed_duration=60,
         recycle_off=900,
-        cycle_time=1800,
+        cycle_time=7500,
     )
 
 
@@ -36,17 +36,17 @@ def setup_variables(
     if include_cycle_time:
         variables.append({
             "name": "cycle_time",
-            "lb": 10, "ub": 600,
+            "lb": 10, "ub": 6000,
             "transform": transform,
         })
     variables.append({
         "name": "feed_duration.time",
-        "lb": 10, "ub": 300,
+        "lb": 10, "ub": 200,
         "transform": transform,
     })
     variables.append({
         "name": "recycle_off_output_state.time",
-        "lb": 10, "ub": 3000,
+        "lb": 10, "ub": 6000,
         "transform": transform,
     })
     return variables

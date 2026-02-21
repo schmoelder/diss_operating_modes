@@ -18,7 +18,7 @@ def setup_process(
         c_feed,
         flow_rate,
         feed_duration=60,
-        cycle_time=600,
+        cycle_time=1000,
     )
 
 

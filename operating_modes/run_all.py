@@ -70,6 +70,7 @@ def setup_options(
     separation_problem: Literal["standard", "difficult", "simple", "ternary"],
     convert_to_linear: bool = False,
     apply_et_assumptions: bool = False,
+    include_cycle_time: bool = False,
     ranking: Literal["equal"] | list[int] = "equal",
     load: bool = False,
     push: bool = True,
@@ -96,6 +97,8 @@ def setup_options(
         name = f"{name}_linear"
     if apply_et_assumptions:
         name = f"{name}_et"
+    if not include_cycle_time:
+        name = f"{name}_auto-cycle-time"
 
     process_options = ProcessOptions(
         operating_mode=operating_mode,
@@ -123,7 +126,7 @@ def setup_options(
         objective=objective,
         cadet_options=cadet_options,
         fractionation_options=fractionation_opts,
-        include_cycle_time=kwargs.get("include_cycle_time", False),
+        include_cycle_time=include_cycle_time,
         transform_variables=kwargs.get("transform_variables", "linear"),
         consider_n_comp_in_linear_constraints=kwargs.get("consider_n_comp_in_linear_constraints", True),
         add_meta_score=kwargs.get("add_meta_score", True),

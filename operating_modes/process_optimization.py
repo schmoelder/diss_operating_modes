@@ -82,14 +82,13 @@ class ProcessOptimization(OptimizationProblem):
     def _setup_simulator(self, cadet_options) -> Cadet:
         process_simulator = Cadet(**cadet_options)
         process_simulator.time_resolution = 0.5
-        process_simulator.evaluate_stationarity = True
-        process_simulator.raise_exception_on_max_cycles = True
-        process_simulator.stationarity_evaluator.add_criterion(MassBalance())
         if (
-            "cycle_time" not in self.variable_names
-            and self.evaluation_objects[0].name != "MRSSR"
+            "cycle_time" in self.variable_names
+            or self.process.name == "MRSSR"
         ):
-            process_simulator.evaluate_stationarity = False
+            process_simulator.evaluate_stationarity = True
+            process_simulator.raise_exception_on_max_cycles = True
+            process_simulator.stationarity_evaluator.add_criterion(MassBalance())
 
         self.add_evaluator(process_simulator)
 

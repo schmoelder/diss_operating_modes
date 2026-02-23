@@ -17,7 +17,7 @@ def setup_process(
     column: ChromatographicColumnBase,
 ) -> FlipFlop:
     """Setup batch-elution process."""
-    return FlipFlop(
+    process = FlipFlop(
         column,
         c_feed,
         flow_rate,
@@ -25,6 +25,8 @@ def setup_process(
         delay_flip=330,
         delay_injection=700,
     )
+    process.cycle_time = 3000
+    return process
 
 
 def setup_variables(
@@ -33,11 +35,12 @@ def setup_variables(
 )-> list[dict]:
     """Setup optimization variables."""
     variables = []
-    variables.append({
-        "name": "cycle_time",
-        "lb": 10, "ub": 3000,
-        "transform": transform,
-    })
+    if include_cycle_time:
+        variables.append({
+            "name": "cycle_time",
+            "lb": 10, "ub": 3000,
+            "transform": transform,
+        })
     variables.append({
         "name": "feed_duration.time",
         "lb": 10, "ub": 300,
@@ -70,13 +73,14 @@ def setup_variable_dependencies(
 ) -> list[dict]:
     """Setup variable dependencies."""
     variable_dependencies = []
-    variable_dependencies.append({
-        "dependent_variable": "cycle_time",
-        "independent_variables": [
-            "feed_duration.time", "delay_flip.time", "delay_injection.time"
-        ],
-        "transform": lambda x0, x1, x2: np.ceil(2*(x0 + x1 + x2)),
-    })
+    if include_cycle_time:
+        variable_dependencies.append({
+            "dependent_variable": "cycle_time",
+            "independent_variables": [
+                "feed_duration.time", "delay_flip.time", "delay_injection.time"
+            ],
+            "transform": lambda x0, x1, x2: np.ceil(2*(x0 + x1 + x2)),
+        })
     return variable_dependencies
 
 

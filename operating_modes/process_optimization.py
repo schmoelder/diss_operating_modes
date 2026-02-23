@@ -94,6 +94,10 @@ class ProcessOptimization(OptimizationProblem):
         self.add_evaluator(process_simulator)
 
     @property
+    def process(self):
+        return self.evaluation_objects[0]
+
+    @property
     def process_simulator(self):
         return self.evaluators_dict["CADET"]
 

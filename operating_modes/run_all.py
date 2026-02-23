@@ -83,7 +83,7 @@ def setup_options(
     Args:
         operating_mode: The operating mode for the process.
         objective: The optimization objective.
-        separation_problem: The binding model (defaults to mode-specific if None).
+        separation_problem: The binding model.
         ranking: The ranking for fractionation (default: "equal").
         load: If True, try loading previously run results.
         push: If True, push results after running the case.
@@ -211,87 +211,90 @@ def setup_cases(
     )
 
     # Configure case studies
-    objectives = [
-        "single-objective",
-        "multi-objective-per-component",
-    ]
     cases = [
-        # Batch-Elution (standard)
-        *[
-            {
-                "operating_mode": "batch-elution",
-                "separation_problem": "standard",
-                "objective": objective,
-            }
-            for objective in objectives
-        ],
-        # Batch-Elution (standard, linear, ET assumptions)
-        *[
-            {
-                "operating_mode": "batch-elution",
-                "separation_problem": "standard",
-                "convert_to_linear": True,
-                "apply_et_assumptions": True,
-                "objective": objective,
-            }
-            for objective in objectives
-        ],
-        # Batch-Elution (ternary)
-        *[
-            {
-                "operating_mode": "batch-elution",
-                "separation_problem": "ternary",
-                "objective": objective,
-            }
-            for objective in objectives
-        ],
-        # CLR (standard)
-        *[
-            {
-                "operating_mode": "CLR",
-                "separation_problem": "standard",
-                "objective": objective,
-            }
-            for objective in objectives
-        ],
-        # CLR (difficult, linear)
-        *[
-            {
-                "operating_mode": "CLR",
-                "separation_problem": "difficult",
-                "convert_to_linear": True,
-                "objective": objective,
-            }
-            for objective in objectives
-        ],
-        # Flip-Flop (simple, linear)
-        *[
-            {
-                "operating_mode": "flip-flop",
-                "separation_problem": "simple",
-                "convert_to_linear": True,
-                "objective": objective,
-            }
-            for objective in objectives
-        ],
-        # MRSSR (standard)
-        *[
-            {
-                "operating_mode": "MRSSR",
-                "separation_problem": "standard",
-                "objective": objective,
-            }
-            for objective in objectives
-        ],
+        # --- Standard cases ---
+        # Batch-Elution (standard, linear, ET assumptions, auto-cycle-time, SOO)
+        {
+            "operating_mode": "batch-elution",
+            "separation_problem": "standard",
+            "convert_to_linear": True,
+            "apply_et_assumptions": True,
+            "objective": "single-objective",
+            "include_cycle_time": False,
+        },
+        # Batch-Elution (standard, auto-cycle-time, SOO)
+        {
+            "operating_mode": "batch-elution",
+            "separation_problem": "standard",
+            "objective": "single-objective",
+            "include_cycle_time": False,
+        },
+        # Batch-Elution (standard, auto-cycle-time, MOO-PC)
+        {
+            "operating_mode": "batch-elution",
+            "separation_problem": "standard",
+            "objective": "multi-objective-per-component",
+            "include_cycle_time": False,
+        },
+        # Batch-Elution (standard, MOO-PC)
+        {
+            "operating_mode": "batch-elution",
+            "separation_problem": "standard",
+            "objective": "multi-objective-per-component",
+            "include_cycle_time": True,
+        },
+        # Batch-Elution (ternary, auto-cycle-time, MOO-PC)
+        {
+            "operating_mode": "batch-elution",
+            "separation_problem": "ternary",
+            "objective": "multi-objective-per-component",
+            "include_cycle_time": False,
+        },
+        # CLR (difficult, linear, auto-cycle-time)
+        {
+            "operating_mode": "CLR",
+            "separation_problem": "difficult",
+            "convert_to_linear": True,
+            "objective": "multi-objective-per-component",
+            "include_cycle_time": False,
+        },
+        # MRSSR (standard, auto-cycle-time)
+        {
+            "operating_mode": "MRSSR",
+            "separation_problem": "standard",
+            "objective": "multi-objective-per-component",
+            "include_cycle_time": False,
+        },
+        # Flip-Flop (simple, linear, auto-cycle-time)
+        {
+            "operating_mode": "flip-flop",
+            "separation_problem": "simple",
+            "convert_to_linear": True,
+            "objective": "multi-objective-per-component",
+            "include_cycle_time": False,
+        },
         # Serial Columns (ternary)
-        *[
-            {
-                "operating_mode": "serial-columns",
-                "separation_problem": "ternary",
-                "objective": objective,
-            }
-            for objective in objectives
-        ],
+        {
+            "operating_mode": "serial-columns",
+            "separation_problem": "ternary",
+            "objective": "multi-objective-per-component",
+            "include_cycle_time": False,
+        },
+        # --- Honorary mentions ---
+        # Batch-Elution (ternary, MOO-PC)
+        {
+            "operating_mode": "batch-elution",
+            "separation_problem": "ternary",
+            "objective": "multi-objective-per-component",
+            "include_cycle_time": True,
+        },
+        # Serial Columns (ternary, MOO-PC)
+        {
+            "operating_mode": "serial-columns",
+            "separation_problem": "ternary",
+            "objective": "multi-objective-per-component",
+            "include_cycle_time": True,
+        },
     ]
 
     # Setup options for case studies
@@ -313,7 +316,6 @@ if __name__ == "__main__":
         fractionation_optimizer="COBYLA",
         ignore_failed=True,
         scale_trust_radius=True,
-        include_cycle_time=True,
         transform_variables="linear",
         consider_n_comp_in_linear_constraints=True,
         add_meta_score=True,

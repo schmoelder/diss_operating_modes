@@ -58,6 +58,124 @@ metrics = {
     },
 }
 
+
+def get_variables(
+    operating_mode: Literal["batch-elution", "CLR", "flip-flop", "MRSSR", "serial-columns"],
+    include_cycle_time: bool,
+) -> dict[str, str]:
+    variables = {}
+
+    if include_cycle_time:
+        variables["cycle_time"] = {
+            "symbol": r"\Delta t_{\text{cycle}}",
+            "unit": r"\text{min}",
+            "factor": 1/60,
+            "format_mm_ss": True,
+        }
+
+    match operating_mode:
+        case "batch-elution":
+            variables["feed_duration.time"] = {
+                "symbol": r"\Delta t_{\text{feed}}",
+                "unit": r"\text{min}",
+                "factor": 1/60,
+                "format_mm_ss": True,
+            }
+        case "CLR":
+            variables["feed_duration.time"] = {
+                "symbol": r"\Delta t_{\text{feed}}",
+                "unit": r"\text{min}",
+                "factor": 1/60,
+                "format_mm_ss": True,
+            }
+            variables["recycle_off_output_state.time"] = {
+                "symbol": r"\Delta t_{\text{recycle,off}}",
+                "unit": r"\text{min}",
+                "factor": 1/60,
+                "format_mm_ss": True,
+            }
+        case "flip-flop":
+            variables["feed_duration.time"] = {
+                "symbol": r"\Delta t_{\text{feed}}",
+                "unit": r"\text{min}",
+                "factor": 1/60,
+                "format_mm_ss": True,
+            }
+            variables["delay_flip.time"] = {
+                "symbol": r"\Delta t_{\text{delay,flip}}",
+                "unit": r"\text{min}",
+                "factor": 1/60,
+                "format_mm_ss": True,
+            }
+            variables["delay_injection.time"] = {
+                "symbol": r"\Delta t_{\text{delay,inject}}",
+                "unit": r"\text{min}",
+                "factor": 1/60,
+                "format_mm_ss": True,
+            }
+        case "MRSSR":
+            variables["feed_duration.time"] = {
+                "symbol": r"\Delta t_{\text{feed}}",
+                "unit": r"\text{min}",
+                "factor": 1/60,
+                "format_mm_ss": True,
+            }
+            variables["recycle_on.time"] = {
+                "symbol": r"t_{\text{recycle,on}}",
+                "unit": r"\text{min}",
+                "factor": 1/60,
+                "format_mm_ss": True,
+            }
+            variables["recycle_off.time"] = {
+                "symbol": r"t_{\text{recycle,off}}",
+                "unit": r"\text{min}",
+                "factor": 1/60,
+                "format_mm_ss": True,
+            }
+            variables["recycle_duration"] = {
+                "symbol": r"\Delta t_{\text{recycle}}",
+                "unit": r"\text{min}",
+                "factor": 1/60,
+                "format_mm_ss": True,
+            }
+        case "serial-columns":
+            variables["feed_duration.time"] = {
+                "symbol": r"\Delta t_{\text{feed}}",
+                "unit": r"\text{min}",
+                "factor": 1/60,
+                "format_mm_ss": True,
+            }
+            variables["serial_off.time"] = {
+                "symbol": r"t_{\text{serial,off}}",
+                "unit": r"\text{min}",
+                "factor": 1/60,
+                "format_mm_ss": True,
+            }
+            variables["serial_on.time"] = {
+                "symbol": r"t_{\text{serial,on}}",
+                "unit": r"\text{min}",
+                "factor": 1/60,
+                "format_mm_ss": True,
+            }
+            variables["serial_duration"] = {
+                "symbol": r"\Delta t_{\text{serial}}",
+                "unit": r"\text{min}",
+                "factor": 1/60,
+                "format_mm_ss": True,
+            }
+            variables["flow_sheet.column_1.length"] = {
+                "symbol": r"L_{\text{c,1}}",
+                "unit": r"\text{cm}",
+                "factor": 100,
+            }
+            variables["flow_sheet.column_2.length"] = {
+                "symbol": r"L_{\text{c,1}}",
+                "unit": r"\text{cm}",
+                "factor": 100,
+            }
+    return variables
+
+
 # %% Setup cases
 
 def get_cases_by_operating_mode(
@@ -430,7 +548,6 @@ def setup_soo_results_table(
 
 def process_soo_results(
     case: Case,
-    variables: dict | None = None,
     load_kwargs: dict | None = None,
     return_results: bool = False,
 ) -> tuple[tuple, tuple, str] | tuple[tuple, tuple, str, OptimizationResults]:
@@ -444,6 +561,11 @@ def process_soo_results(
         load_kwargs,
     )
     optimization_problem = optimization_results.optimization_problem
+
+    variables = get_variables(
+        operating_mode,
+        case.options.optimization_options.include_cycle_time,
+    )
 
     # --- Objectives Figure ---
     fig_objectives, axs_objectives = optimization_results.plot_objectives()
@@ -612,7 +734,6 @@ def setup_moo_results_table(
 
 def process_moo_results(
     case: Case,
-    variables: dict | None = None,
     load_kwargs: dict | None = None,
     use_population_all: bool = True,
     return_results: bool = False,
@@ -627,6 +748,11 @@ def process_moo_results(
         load_kwargs,
     )
     optimization_problem = optimization_results.optimization_problem
+
+    variables = get_variables(
+        operating_mode,
+        case.options.optimization_options.include_cycle_time,
+    )
 
     n_comp = optimization_problem.evaluation_objects[0].n_comp
     n_metrics = int(optimization_problem.n_objectives / n_comp)

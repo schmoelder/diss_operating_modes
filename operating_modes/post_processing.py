@@ -176,6 +176,17 @@ def get_variables(
     return variables
 
 
+def get_case_id(case: Case) -> str:
+    id = case.name
+
+    id = id.replace("standard_", "")
+    id = id.replace("auto-cycle-time", "auto-cycle")
+    id = id.replace("single-objective", "soo")
+    id = id.replace("multi-objective", "moo")
+    id = id.replace("per-component", "pc")
+
+    return id
+
 # %% Setup cases
 
 def get_cases_by_operating_mode(
@@ -478,12 +489,6 @@ def setup_soo_results_table(
     separation_problem = case.options.process_options.separation_problem
     objective = case.options.optimization_options.objective
 
-    process_name = (
-        operating_mode if separation_problem == "standard"
-        else f"{operating_mode}_{separation_problem}"
-    )
-    objective_short = objective.replace("single-objective", "soo")
-
     f_meta = PerformanceProduct(ranking="equal")
 
     # Initialize rows
@@ -536,7 +541,7 @@ def setup_soo_results_table(
         f"Optimization variables and KPIs of {objective} optimization of "
         f"{operating_mode} process with a {separation_problem} component system. "
     )
-    table_name = f"{process_name}_{objective_short}_kpi"
+    table_name = f"{get_case_id(case)}_kpi"
 
     return embed_table_in_list_table_directive(
         rows,
@@ -653,13 +658,6 @@ def setup_moo_results_table(
     separation_problem = case.options.process_options.separation_problem
     objective = case.options.optimization_options.objective
 
-    process_name = (
-        operating_mode if separation_problem == "standard"
-        else f"{operating_mode}_{separation_problem}"
-    )
-    objective_short = objective.replace("multi-objective", "moo")
-    objective_short = objective_short.replace("per-component", "pc")
-
     f_meta = PerformanceProduct(ranking="equal")
 
     # Initialize rows
@@ -722,7 +720,7 @@ def setup_moo_results_table(
         "component system. Each row corresponds to a non-dominated solution "
         f"that is extreme with respect to one objective (highlighted in bold)."
     )
-    table_name = f"{process_name}_{objective_short}_kpi"
+    table_name = f"{get_case_id(case)}_kpi"
 
     return embed_table_in_list_table_directive(
         rows,

@@ -25,7 +25,7 @@ def setup_process(
         delay_flip=330,
         delay_injection=700,
     )
-    process.cycle_time = 3000
+    process.cycle_time = 3600
     return process
 
 
@@ -38,22 +38,22 @@ def setup_variables(
     if include_cycle_time:
         variables.append({
             "name": "cycle_time",
-            "lb": 10, "ub": 3000,
+            "lb": 10, "ub": 3600,
             "transform": transform,
         })
     variables.append({
         "name": "feed_duration.time",
-        "lb": 10, "ub": 300,
+        "lb": 10, "ub": 600,
         "transform": transform,
     })
     variables.append({
         "name": "delay_flip.time",
-        "lb": 10, "ub": 1000,
+        "lb": 10, "ub": 600,
         "transform": transform,
     })
     variables.append({
         "name": "delay_injection.time",
-        "lb": 10, "ub": 1000,
+        "lb": 10, "ub": 600,
         "transform": transform,
     })
     return variables

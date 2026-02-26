@@ -20,7 +20,7 @@ def setup_process(
     feed_duration=60,
     delay_flip=330,
     delay_injection=700,
-    cycle_time=3600,
+    cycle_time=12000,
 ) -> FlipFlop:
     """Setup batch-elution process."""
     process = FlipFlop(
@@ -44,22 +44,22 @@ def setup_variables(
     if include_cycle_time:
         variables.append({
             "name": "cycle_time",
-            "lb": 10, "ub": 3600,
+            "lb": 10, "ub": 6000,
             "transform": transform,
         })
     variables.append({
         "name": "feed_duration.time",
-        "lb": 10, "ub": 600,
+        "lb": 10, "ub": 1800,
         "transform": transform,
     })
     variables.append({
         "name": "delay_flip.time",
-        "lb": 10, "ub": 600,
+        "lb": 10, "ub": 1800,
         "transform": transform,
     })
     variables.append({
         "name": "delay_injection.time",
-        "lb": 10, "ub": 600,
+        "lb": 10, "ub": 1800,
         "transform": transform,
     })
     return variables

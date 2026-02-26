@@ -11,14 +11,18 @@ from operating_modes.model_parameters import(
 
 def setup_process(
     column: ChromatographicColumnBase,
+    c_feed=c_feed,
+    flow_rate=flow_rate,
+    feed_duration=60,
+    cycle_time=1000,
 ) -> BatchElution:
     """Setup batch-elution process."""
     return BatchElution(
         column,
-        c_feed,
-        flow_rate,
-        feed_duration=60,
-        cycle_time=1000,
+        c_feed=c_feed,
+        flow_rate=flow_rate,
+        feed_duration=feed_duration,
+        cycle_time=cycle_time,
     )
 
 

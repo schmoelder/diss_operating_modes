@@ -15,17 +15,24 @@ from operating_modes.model_parameters import(
 
 def setup_process(
     column: ChromatographicColumnBase,
+    split_ratio=1/3,
+    c_feed=c_feed,
+    flow_rate=flow_rate,
+    feed_duration=60,
+    t_serial_off=6.6*60,
+    t_serial_on=8.8*60,
+    cycle_time=1000,
 ) -> SerialColumns:
     """Setup serial-columns process."""
     return SerialColumns(
         column,
-        split_ratio=1/3,
+        split_ratio=split_ratio,
         c_feed=c_feed,
         flow_rate=flow_rate,
-        feed_duration=60,
-        t_serial_off=6.6*60,
-        t_serial_on=8.8*60,
-        cycle_time=1000,
+        feed_duration=feed_duration,
+        t_serial_off=t_serial_off,
+        t_serial_on=t_serial_on,
+        cycle_time=cycle_time,
     )
 
 

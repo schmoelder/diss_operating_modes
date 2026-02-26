@@ -15,18 +15,26 @@ from operating_modes.model_parameters import(
 
 def setup_process(
     column: ChromatographicColumnBase,
+    c_feed=c_feed,
+    flow_rate=flow_rate,
+    feed_duration=60,
+    recycle_on=6.6*60,
+    recycle_off=8.0*60,
+    cycle_time=1000,
+    V_tank=0.001,
+    c_tank_init=c_feed,
 ) -> MRSSR:
     """Setup MR-SSR process."""
     return MRSSR(
         column,
-        c_feed,
-        flow_rate,
-        feed_duration=60,
-        recycle_on=6.6*60,
-        recycle_off=8.0*60,
-        cycle_time=1000,
-        V_tank=0.001,
-        c_tank_init=c_feed,
+        c_feed=c_feed,
+        flow_rate=flow_rate,
+        feed_duration=feed_duration,
+        recycle_on=recycle_on,
+        recycle_off=recycle_off,
+        cycle_time=cycle_time,
+        V_tank=V_tank,
+        c_tank_init=c_tank_init,
     )
 
 

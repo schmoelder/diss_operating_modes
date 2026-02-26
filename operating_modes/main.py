@@ -28,6 +28,7 @@ def setup_process(
     separation_problem: Literal["standard", "difficult", "simple", "ternary"],
     apply_et_assumptions: bool = False,
     convert_to_linear: bool = False,
+    **kwargs,
 ) -> Process:
     """Set up and return a configured `Process` object."""
     binding_model = setup_binding_model(
@@ -36,7 +37,7 @@ def setup_process(
     )
     column = setup_column(binding_model, convert_to_lrm=apply_et_assumptions)
 
-    process = case_module.setup_process(column)
+    process = case_module.setup_process(column, **kwargs)
 
     if apply_et_assumptions:
         apply_et_assumptions_to_process(process)

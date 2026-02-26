@@ -15,17 +15,23 @@ from operating_modes.model_parameters import(
 
 def setup_process(
     column: ChromatographicColumnBase,
+    c_feed=c_feed,
+    flow_rate=flow_rate,
+    feed_duration=60,
+    delay_flip=330,
+    delay_injection=700,
+    cycle_time=3600,
 ) -> FlipFlop:
     """Setup batch-elution process."""
     process = FlipFlop(
         column,
-        c_feed,
-        flow_rate,
-        feed_duration=60,
-        delay_flip=330,
-        delay_injection=700,
+        c_feed=c_feed,
+        flow_rate=flow_rate,
+        feed_duration=feed_duration,
+        delay_flip=delay_flip,
+        delay_injection=delay_injection,
     )
-    process.cycle_time = 3600
+    process.cycle_time = cycle_time
     return process
 
 

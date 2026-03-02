@@ -187,6 +187,7 @@ def get_case_id(case: Case) -> str:
 
     return id
 
+
 # %% Setup cases
 
 def get_cases_by_operating_mode(
@@ -573,7 +574,9 @@ def process_soo_results(
     )
 
     # --- Objectives Figure ---
-    fig_objectives, axs_objectives = optimization_results.plot_objectives()
+    fig_objectives, axs_objectives = optimization_results.plot_objectives(
+        autoscale=False,
+    )
 
     for i_var, (variable_name, variable_info) in enumerate(variables.items()):
         ax = axs_objectives[0, i_var]
@@ -756,7 +759,9 @@ def process_moo_results(
     n_metrics = int(optimization_problem.n_objectives / n_comp)
 
     # --- Objectives Figure ---
-    fig_objectives, axs_objectives = optimization_results.plot_objectives()
+    fig_objectives, axs_objectives = optimization_results.plot_objectives(
+        autoscale=False,
+    )
 
     for i_metric, (metric_name, metric_info) in enumerate(metrics.items()):
         if metric_name == "purity":

@@ -738,6 +738,7 @@ def process_moo_results(
     load_kwargs: dict | None = None,
     use_population_all: bool = True,
     return_results: bool = False,
+    set_gobal_limits: bool = True,
 ) -> tuple[tuple, tuple, str] | tuple[tuple, tuple, str, OptimizationResults]:
     """Process multi-objective optimization results."""
     operating_mode = case.options.process_options.operating_mode
@@ -842,6 +843,17 @@ def process_moo_results(
 
     for ax in axs_chrom[-1, 1:]:
         ax.axis('off')
+
+    # Get global min/max for x and y
+    if set_gobal_limits:
+        x_min = min(ax.get_xlim()[0] for ax in axs_chrom.flatten())
+        x_max = max(ax.get_xlim()[1] for ax in axs_chrom.flatten())
+        y_min = min(ax.get_ylim()[0] for ax in axs_chrom.flatten())
+        y_max = max(ax.get_ylim()[1] for ax in axs_chrom.flatten())
+
+        for ax in axs_chrom.flatten():
+            ax.set_xlim(x_min, x_max)
+            ax.set_ylim(y_min, y_max)
 
     fig_chrom_caption = (
         f"Chromatograms of Pareto edge points of {objective} optimization of "

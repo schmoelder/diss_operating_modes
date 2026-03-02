@@ -35,7 +35,7 @@ from addict import Dict
 import matplotlib.pyplot as plt
 import numpy as np
 
-from CADETProcess.plotting import chromapy_cycler
+from CADETProcess import plotting
 from CADETProcess.processModel import (
     ChromatographicColumnBase,
     Linear,
@@ -810,26 +810,37 @@ def compare_cadet_with_et(
     et_results = et_simulator.simulate(process, **kwargs)
     et_time = et_results.time_cycle / 60
 
-    for outlet in process.flow_sheet.product_outlets:
-        fig, ax = cadet_results.solution[outlet.name].outlet.plot()
+    outlets = process.flow_sheet.product_outlets
+    fig, axs = plotting.setup_figure(
+        ncols=len(outlets),
+        scale_with_subplots=True,
+    )
+
+    for outlet, ax in zip(outlets, np.array(axs).flatten()):
+        cadet_results.solution[outlet.name].outlet.plot(ax=ax)
 
         # Reset the color cycler
-        ax.set_prop_cycle(chromapy_cycler)
+        ax.set_prop_cycle(plotting.chromapy_cycler)
 
         et_outlet_solution = et_results.solution[outlet.name].outlet.solution
         ax.plot(et_time, et_outlet_solution, "--")
 
-        fig.tight_layout()
+    fig.tight_layout()
 
     if not plot_column_outlet:
         return fig, ax
 
-    for column in process.flow_sheet.units_with_binding:
-        fig_col, ax_col = cadet_results.solution[column.name].outlet.plot()
+    columns = process.flow_sheet.units_with_binding
+    fig_col, axs_col = plotting.setup_figure(
+        ncols=len(columns),
+        scale_with_subplots=True,
+    )
+    for column, ax in zip(outlets, np.array(axs_col).flatten()):
+        cadet_results.solution[column.name].outlet.plot(ax=ax)
 
-        et_column_solution = et_results.solution[outlet.name].outlet.solution
-        ax_col.plot(et_time, et_column_solution)
+        et_column_solution = et_results.solution[column.name].outlet.solution
+        ax.plot(et_time, et_column_solution)
 
-        fig_col.tight_layout()
+    fig_col.tight_layout()
 
-    return fig, ax, fig_col, ax_col
+    return fig, ax, fig_col, axs_col

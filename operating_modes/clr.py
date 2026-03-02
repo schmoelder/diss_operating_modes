@@ -18,7 +18,7 @@ def setup_process(
     c_feed=c_feed,
     flow_rate=flow_rate,
     feed_duration=60,
-    recycle_off=900,
+    t_recycle_off=900,
     cycle_time=7500,
 ) -> CLR:
     """Setup CLR process."""
@@ -27,7 +27,7 @@ def setup_process(
         c_feed=c_feed,
         flow_rate=flow_rate,
         feed_duration=feed_duration,
-        recycle_off=recycle_off,
+        t_recycle_off=t_recycle_off,
         cycle_time=cycle_time,
     )
 

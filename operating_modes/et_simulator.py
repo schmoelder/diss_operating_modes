@@ -202,6 +202,8 @@ class ETSimulator:
                         process.flow_rate_timelines[unit_name]["total_out"][None].value(time)                    )
                     )
 
+        solution = Dict(solution)
+
         chromatograms = [
             solution[o.name]["outlet"][-1]
             for o in process.flow_sheet.product_outlets

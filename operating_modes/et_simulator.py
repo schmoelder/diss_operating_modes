@@ -810,7 +810,7 @@ def compare_cadet_with_et(
 
     et_simulator = ETSimulator()
     et_results = et_simulator.simulate(process, **kwargs)
-    et_time = et_results.time_cycle / 60
+    et_time = et_results.time_complete / 60
 
     outlets = process.flow_sheet.product_outlets
     fig, axs = plotting.setup_figure(

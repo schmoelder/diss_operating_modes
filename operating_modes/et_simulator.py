@@ -691,6 +691,12 @@ class ETSimulator:
 
         time, solutions = self._empty_solution(process, n)
 
+        # Serial mask: True where column 1 outlet is connected to column 2 inlet
+        if t_serial_on < t_serial_off:
+            mask_serial = (t_serial_on <= time) & (time < t_serial_off)
+        else:  # Handle wrap-around (e.g., t_serial_on > t_serial_off)
+            mask_serial = (time < t_serial_off) | (t_serial_on <= time)
+
         # Feed: pulse from 0 to t_inj
         for i in range(process.n_comp):
             self._write_pulse(
@@ -712,7 +718,7 @@ class ETSimulator:
                 t_inj,
                 c_feed[i]
             )
-            ts, te = self._elution_window(
+            ts_1, te_1 = self._elution_window(
                 length=column_1.length,
                 u0=u0,
                 F=F,
@@ -723,37 +729,53 @@ class ETSimulator:
                 time,
                 solutions["column_1"]["outlet"],
                 i,
-                ts,
-                te,
-                c_feed[i]
-            )
-
-        # Column 2: inlet (from column_1 outlet during serial phase)
-        mask_serial = (min(t_serial_on, t_serial_off) <= time) & (time < max(t_serial_on, t_serial_off))
-        for i in range(process.n_comp):
-            solutions["column_2"]["inlet"][mask_serial, i] = solutions["column_1"]["outlet"][mask_serial, i]
-
-        # Column 2: outlet
-        for i, a_i in enumerate(binding.k_eq):
-            ts, te = self._elution_window(
-                length=column_1.length + column_2.length,
-                u0=u0,
-                F=F,
-                a_i=a_i,
-                width=t_inj,
-            )
-            self._write_pulse(
-                time,
-                solutions["column_2"]["outlet"],
-                i,
-                ts,
-                te,
+                ts_1,
+                te_1,
                 c_feed[i]
             )
 
         # Outlet 1: column_1 outlet, zero during serial phase
         solutions["outlet_1"]["outlet"] = solutions["column_1"]["outlet"].copy()
         solutions["outlet_1"]["outlet"][mask_serial, :] = 0.0
+
+        # Column 2: inlet (from column_1 outlet during serial phase)
+        for i in range(process.n_comp):
+            solutions["column_2"]["inlet"][mask_serial, i] = solutions["column_1"]["outlet"][mask_serial, i]
+
+        # Column 2: outlet
+        for i, a_i in enumerate(binding.k_eq):
+            # Get the elution window for column 1
+            ts_1, te_1 = self._elution_window(
+                length=column_1.length,
+                u0=u0,
+                F=F,
+                a_i=a_i,
+                width=t_inj,
+            )
+
+            # Find the time points where column 2 receives input
+            injection_mask = (ts_1 <= time) & (time < te_1) & mask_serial
+            injection_times = time[injection_mask]
+
+            if len(injection_times) > 0:
+                # Calculate the effective injection width (total time where column 2 receives input)
+                effective_width = injection_times[-1] - injection_times[0]
+
+                # Calculate the delay between column 1 outlet and column 2 outlet
+                delay = column_2.length / self._velocity(u0, F, a_i)
+
+                # Calculate the elution window for column 2
+                ts_2 = injection_times[0] + delay
+                te_2 = ts_2 + effective_width
+
+                self._write_pulse(
+                    time,
+                    solutions["column_2"]["outlet"],
+                    i,
+                    ts_2,
+                    te_2,
+                    c_feed[i]
+                )
 
         # Outlet 2: column_2 outlet
         solutions["outlet_2"]["outlet"] = solutions["column_2"]["outlet"].copy()

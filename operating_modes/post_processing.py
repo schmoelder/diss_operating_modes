@@ -489,6 +489,7 @@ def setup_soo_results_table(
     operating_mode = case.options.process_options.operating_mode
     separation_problem = case.options.process_options.separation_problem
     objective = case.options.optimization_options.objective
+    include_cycle_time = case.options.optimization_options.include_cycle_time
 
     f_meta = PerformanceProduct(ranking="equal")
 
@@ -496,14 +497,32 @@ def setup_soo_results_table(
     rows = []
 
     # Headers
-    rows.append([
+    # First row: Symbols
+    row = []
+    row += [
         *[rf"${var_info['symbol']}~/$" for var_info in variables.values()],
-        *[rf"${metric_info['symbol']}~/$" for metric_info in metrics.values()],
-    ])
-    rows.append([
-        *[rf"${var_info['unit']}$" for var_info in variables.values()],
-        *[rf"${metric_info['unit']}$" for metric_info in metrics.values()],
-    ])
+    ]
+    if not include_cycle_time:
+        variables_with_cycle_time = get_variables(
+            operating_mode,
+            include_cycle_time=True,
+        )
+        row.append(rf"${variables_with_cycle_time['cycle_time']['symbol']}^*~/$")
+    row += [
+        *[rf"${metric_info['symbol']}~/$" for metric_info in metrics.values()]
+    ]
+    rows.append(row)
+    # Second row: units
+    row = []
+    row += [
+        *[rf"${var_info['unit']}$" for var_info in variables.values()]
+    ]
+    if not include_cycle_time:
+        row.append(rf"${variables_with_cycle_time['cycle_time']['unit']}$")
+    row += [
+        *[rf"${metric_info['unit']}$" for metric_info in metrics.values()]
+    ]
+    rows.append(row)
 
     # Data
     row = []
@@ -515,7 +534,14 @@ def setup_soo_results_table(
         else:
             x_i = x[i_x]*var_info["factor"]
             x_i = f"${format_value_to_latex(x_i)}$"
+        row.append(x_i)
 
+    if not include_cycle_time:
+        if variables_with_cycle_time["cycle_time"].get("format_mm_ss"):
+            x_i = f"${format_mm_ss(frac.cycle_time)}$"
+        else:
+            x_i = frac.cycle_time*variables_with_cycle_time["cycle_time"]["factor"]
+            x_i = f"${format_value_to_latex(x_i)}$"
         row.append(x_i)
 
     # Add metrics with bold diagonal
@@ -669,6 +695,7 @@ def setup_moo_results_table(
     operating_mode = case.options.process_options.operating_mode
     separation_problem = case.options.process_options.separation_problem
     objective = case.options.optimization_options.objective
+    include_cycle_time = case.options.optimization_options.include_cycle_time
 
     f_meta = PerformanceProduct(ranking="equal")
 
@@ -676,16 +703,32 @@ def setup_moo_results_table(
     rows = []
 
     # Headers
-    rows.append([
-        " ",
+    # First row: Symbols
+    row = [" "]
+    row += [
         *[rf"${var_info['symbol']}~/$" for var_info in variables.values()],
-        *[rf"${metric_info['symbol']}~/$" for metric_info in metrics.values()],
-    ])
-    rows.append([
-        " ",
-        *[rf"${var_info['unit']}$" for var_info in variables.values()],
-        *[rf"${metric_info['unit']}$" for metric_info in metrics.values()],
-    ])
+    ]
+    if not include_cycle_time:
+        variables_with_cycle_time = get_variables(
+            operating_mode,
+            include_cycle_time=True,
+        )
+        row.append(rf"${variables_with_cycle_time['cycle_time']['symbol']}^*~/$")
+    row += [
+        *[rf"${metric_info['symbol']}~/$" for metric_info in metrics.values()]
+    ]
+    rows.append(row)
+    # Second row: units
+    row = [" "]
+    row += [
+        *[rf"${var_info['unit']}$" for var_info in variables.values()]
+    ]
+    if not include_cycle_time:
+        row.append(rf"${variables_with_cycle_time['cycle_time']['unit']}$")
+    row += [
+        *[rf"${metric_info['unit']}$" for metric_info in metrics.values()]
+    ]
+    rows.append(row)
 
     # Data
     for i_case, (x, frac) in enumerate(best_individuals):
@@ -702,6 +745,14 @@ def setup_moo_results_table(
                 x_i = x[i_x]*var_info["factor"]
                 x_i = f"${format_value_to_latex(x_i)}$"
 
+            row.append(x_i)
+
+        if not include_cycle_time:
+            if variables_with_cycle_time["cycle_time"].get("format_mm_ss"):
+                x_i = f"${format_mm_ss(frac.cycle_time)}$"
+            else:
+                x_i = frac.cycle_time*variables_with_cycle_time["cycle_time"]["factor"]
+                x_i = f"${format_value_to_latex(x_i)}$"
             row.append(x_i)
 
         # Add metrics with bold diagonal

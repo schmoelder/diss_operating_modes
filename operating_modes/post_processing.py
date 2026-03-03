@@ -582,9 +582,14 @@ def process_soo_results(
         ax = axs_objectives[0, i_var]
 
         ax.set_xlabel(f"${variable_info['symbol']}~/~{variable_info['unit']}$")
-        ax.xaxis.set_major_formatter(ticker.FuncFormatter(
-            lambda x, _: f"{x*variable_info['factor']:.0f}")
-        )
+        if variable_info.get("format_mm_ss"):
+            ax.xaxis.set_major_formatter(ticker.FuncFormatter(
+                lambda x, _: f"${format_mm_ss(x)}$"
+            ))
+        else:
+            ax.xaxis.set_major_formatter(ticker.FuncFormatter(
+                lambda x, _: f"{x*variable_info['factor']:.0f}"
+            ))
 
         ax.set_ylabel(f"${metrics['meta']['symbol']}~/~{metrics['meta']['unit']}$")
         ax.yaxis.set_major_formatter(ticker.FuncFormatter(
@@ -772,9 +777,14 @@ def process_moo_results(
                 ax = axs_objectives[n_comp*i_metric+i_comp, i_var]
 
                 ax.set_xlabel(f"${variable_info['symbol']}~/~{variable_info['unit']}$")
-                ax.xaxis.set_major_formatter(ticker.FuncFormatter(
-                    lambda x, _: f"{x*variable_info['factor']:.0f}")
-                )
+                if variable_info.get("format_mm_ss"):
+                    ax.xaxis.set_major_formatter(ticker.FuncFormatter(
+                        lambda x, _: f"${format_mm_ss(x)}$"
+                    ))
+                else:
+                    ax.xaxis.set_major_formatter(ticker.FuncFormatter(
+                        lambda x, _: f"{x*variable_info['factor']:.0f}"
+                    ))
 
                 ax.set_ylabel(f"${metric_info['symbol']}~/~{metric_info['unit']}$")
                 ax.yaxis.set_major_formatter(ticker.FuncFormatter(

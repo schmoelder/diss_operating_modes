@@ -556,7 +556,11 @@ def process_soo_results(
     case: Case,
     load_kwargs: dict | None = None,
     return_results: bool = False,
-) -> tuple[tuple, tuple, str] | tuple[tuple, tuple, str, OptimizationResults]:
+) -> (
+    tuple[tuple, tuple, str]
+    |
+    tuple[tuple, tuple, str, OptimizationResults, SimulationResults, Fractionator]
+):
     """Process single-objective optimization results."""
     operating_mode = case.options.process_options.operating_mode
     separation_problem = case.options.process_options.separation_problem
@@ -631,7 +635,7 @@ def process_soo_results(
         (fig_objectives, axs_objectives, fig_objectives_caption),
         (fig_chrom, ax_chrom, fig_chrom_caption),
         table,
-        optimization_results,
+        optimization_results, simulation_results, frac
     )
 
 
@@ -744,7 +748,11 @@ def process_moo_results(
     use_population_all: bool = True,
     return_results: bool = False,
     set_gobal_limits: bool = True,
-) -> tuple[tuple, tuple, str] | tuple[tuple, tuple, str, OptimizationResults]:
+) -> (
+    tuple[tuple, tuple, str]
+    |
+    tuple[tuple, tuple, str, OptimizationResults, list[SimulationResults], list[Fractionator]]
+):
     """Process multi-objective optimization results."""
     operating_mode = case.options.process_options.operating_mode
     separation_problem = case.options.process_options.separation_problem
@@ -873,6 +881,8 @@ def process_moo_results(
     # --- Table ---
     # Update args for table
     x_best = np.vstack((x_best, x_meta))
+    simulation_results = simulation_results.ravel().tolist()
+    simulation_results.append(sim_meta)
     fractionators = fractionators.ravel().tolist()
     fractionators.append(frac_meta)
 
@@ -896,4 +906,6 @@ def process_moo_results(
         (fig_chrom, axs_chrom, fig_chrom_caption),
         table,
         optimization_results,
+        simulation_results,
+        fractionators,
     )

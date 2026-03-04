@@ -186,7 +186,7 @@ def get_variable_dependencies(
             if include_cycle_time:
                 return [
                     r"$\Delta t_{\text{cycle}} = "
-                    r"2 \times (\Delta t_{\text{feed}} "
+                    r"2 (\Delta t_{\text{feed}} "
                     r"+ \Delta t_{\text{delay,flip}} "
                     r"+ \Delta t_{\text{delay,inject}})$",
                 ]
@@ -199,6 +199,7 @@ def get_variable_dependencies(
                 r"$t_{\text{serial,on}} = t_{\text{serial,off}} + \Delta t_{\text{serial}}$",
                 r"$L_{\text{c,2}} = 0.6~\text{m} - L_{\text{c,1}}$",
             ]
+    return []
 
 
 def get_case_id(case: Case) -> str:
@@ -488,8 +489,6 @@ def embed_figure_in_directive(
     return embedded_figure
 
 
-
-
 # %% Overview listing
 
 def format_linear_constraint(opt_vars, lhs, b, is_equality=False):
@@ -512,18 +511,23 @@ def format_linear_constraint(opt_vars, lhs, b, is_equality=False):
         elif coeff == -1:
             terms.append(f"- {var}")
         else:
-            terms.append(rf"{coeff} \times {var}" if coeff > 0 else f"- {abs(coeff)} * {var}")
+            terms.append(rf"{coeff} {var}" if coeff > 0 else f"- {abs(coeff)} * {var}")
 
     # Join terms with " + " or " - " as appropriate
     constraint = " ".join(terms).replace("+ -", "- ").replace("  ", " ")
 
     if is_equality:
-        return rf"${constraint} = {b}$"
+        return rf"{constraint} = {b}"
     else:
-        return rf"${constraint} \le {b}$"
+        return rf"{constraint} \le {b}"
 
 
-def setup_overview(case: Case) -> str:
+def setup_overview(
+    case: Case,
+    include_operating_mode: bool = False,
+    include_et_assumption: bool = False,
+    caption: str | None = None,
+) -> str:
     optimization_problem, optimizer = load_optimization_config(case)
 
     operating_mode = case.options.process_options.operating_mode
@@ -537,66 +541,89 @@ def setup_overview(case: Case) -> str:
     objective = case.options.optimization_options.objective
 
     rows = []
-    rows.append(f"- Operating mode: {operating_mode}")
-    rows.append(f"- Separation problem: {separation_problem}")
-    rows.append(f"- Binding model: {'Linear' if convert_to_linear else 'Langmuir'}")
-    rows.append(f"- Ideal model: {apply_et_assumptions}")
+    if include_operating_mode:
+        rows.append(["**Operating mode**", f"{operating_mode}"])
+    if include_et_assumption:
+        rows.append(["**ET assumption**", f"{apply_et_assumptions}"])
+    rows.append(["**Separation problem**", f"{separation_problem}"])
+    rows.append(["**Binding model**", f"{'Linear' if convert_to_linear else 'Langmuir'}"])
 
     # Variables
-    if optimization_problem.n_dependent_variables == 0:
-        rows.append("- Variables:")
-    else:
-        rows.append("- Independent variables:")
-
     var_info = get_variables(
         operating_mode,
         include_cycle_time,
     )
-    for var in optimization_problem.independent_variables:
+    for i, var in enumerate(optimization_problem.independent_variables):
         symbol = var_info[var.name]["symbol"]
         lb = var.lb
         ub = var.ub
         if var_info[var.name].get("format_mm_ss"):
             if not np.isinf(lb):
-                lb = f"${format_mm_ss(lb)}$"
+                lb = f"{format_mm_ss(lb)}"
             if not np.isinf(ub):
-                ub = f"${format_mm_ss(ub)}$"
+                ub = f"{format_mm_ss(ub)}"
         else:
             lb = lb*var_info[var.name]["factor"]
-            lb = f"${format_value_to_latex(lb)}$"
+            lb = f"{format_value_to_latex(lb)}"
             ub = ub*var_info[var.name]["factor"]
-            ub = f"${format_value_to_latex(ub)}$"
+            ub = f"{format_value_to_latex(ub)}"
 
         unit = var_info[var.name]["unit"]
 
-        rows.append(rf"  - ${symbol} \in [{lb},{ub}]~/~{unit}$")
+        if i == 0:
+            # Variables
+            if optimization_problem.n_dependent_variables == 0:
+                prefix = "**Variables**"
+            else:
+                prefix = "**Independent Variables**"
+        else:
+            prefix = " "
+        rows.append([prefix, f"${symbol} \in [{lb},{ub}]~/~{unit}$"])
 
-    if optimization_problem.n_linear_constraints >= 1:
-        rows.append("- Linear constraints:")
-        for lincon in optimization_problem.linear_constraints:
-            opt_vars = [var_info[var]["symbol"] for var in lincon["opt_vars"]]
-            rows.append(rf"  - {format_linear_constraint(opt_vars, lincon['lhs'], lincon['b'])}")
+    # Linear constraints
+    for i, lincon in enumerate(optimization_problem.linear_constraints):
+        if i == 0:
+            prefix = "**Linear constraints**"
+        else:
+            prefix = " "
+
+        opt_vars = [var_info[var]["symbol"] for var in lincon["opt_vars"]]
+        rows.append([prefix, f"${format_linear_constraint(opt_vars, lincon['lhs'], lincon['b'])}$"])
 
     # Linear equality constraints
-    if optimization_problem.n_linear_equality_constraints >= 1:
-        rows.append("- Linear equality constraints:")
-        for lincon in optimization_problem.linear_equality_constraints:
-            opt_vars = [var_info[var]["symbol"] for var in lincon["opt_vars"]]
-            rows.append(
-                rf"  - {format_linear_constraint(opt_vars, lincon['lhs'], lincon['beq'], True)}"
-            )
+    for i, lineqcon in enumerate(optimization_problem.linear_equality_constraints):
+        if i == 0:
+            prefix = "**Linear equality constraints**"
+        else:
+            prefix = " "
 
-    # TODO: Variable dependencies (might be tricky...)
+        opt_vars = [var_info[var]["symbol"] for var in lineqcon["opt_vars"]]
+        rows.append([
+            prefix,
+            f"${format_linear_constraint(opt_vars, lineqcon['lhs'], lineqcon['beq'], True)}$"
+        ])
+
+    # Variable dependencies (might be tricky...)
     variable_dependencies = get_variable_dependencies(operating_mode, include_cycle_time)
-    if variable_dependencies:
-        rows.append("- Variable dependencies:")
-        for var_dep in variable_dependencies:
-            rows.append(f"  - {var_dep}")
+    for i, var_dep in enumerate(variable_dependencies):
+        if i == 0:
+            prefix = "**Variable dependencies**"
+        else:
+            prefix = " "
+        rows.append([prefix, f"{var_dep}"])
 
     # Objective
-    rows.append(f"- Objective: {objective}")
+    rows.append(["**Objective**", f"{objective}"])
 
-    return rows
+    table_name = f"{get_case_id(case)}_overview"
+
+    return embed_table_in_list_table_directive(
+        rows,
+        caption,
+        name=table_name,
+        header_rows=0,
+        align="left",
+    )
 
 
 

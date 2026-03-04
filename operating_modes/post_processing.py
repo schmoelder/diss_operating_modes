@@ -176,6 +176,31 @@ def get_variables(
     return variables
 
 
+def get_variable_dependencies(
+    operating_mode: Literal["batch-elution", "CLR", "flip-flop", "MRSSR", "serial-columns"],
+    include_cycle_time: bool,
+) -> list[str]:
+    """Setup variable dependencies."""
+    match operating_mode:
+        case "flip-flop":
+            if include_cycle_time:
+                return [
+                    r"$\Delta t_{\text{cycle}} = "
+                    r"2 \times (\Delta t_{\text{feed}} "
+                    r"+ \Delta t_{\text{delay,flip}} "
+                    r"+ \Delta t_{\text{delay,inject}})$",
+                ]
+        case "MRSSR":
+            return [
+                r"$t_{\text{recycle,off}} = t_{\text{recycle,on}} + \Delta t_{\text{recycle}}$",
+            ]
+        case "serial-columns":
+            return [
+                r"$t_{\text{serial,on}} = t_{\text{serial,off}} + \Delta t_{\text{serial}}$",
+                r"$L_{\text{c,2}} = 0.6~\text{m} - L_{\text{c,1}}$",
+            ]
+
+
 def get_case_id(case: Case) -> str:
     id = case.name
 
@@ -461,6 +486,118 @@ def embed_figure_in_directive(
     embedded_figure += "```"
 
     return embedded_figure
+
+
+
+
+# %% Overview listing
+
+def format_linear_constraint(opt_vars, lhs, b, is_equality=False):
+    """
+    Formats linear constraints from variables, coefficients, and a right-hand side value.
+
+    Args:
+        opt_vars (list): List of variable names.
+        lhs (list): List of coefficients for the variables.
+        b (float): Right-hand side value.
+        is_equality (bool): If True, consider it as linear equality constraint
+
+    Returns:
+        str: Formatted linear constraint string
+    """
+    terms = []
+    for coeff, var in zip(lhs, opt_vars):
+        if coeff == 1:
+            terms.append(f"{var}")
+        elif coeff == -1:
+            terms.append(f"- {var}")
+        else:
+            terms.append(rf"{coeff} \times {var}" if coeff > 0 else f"- {abs(coeff)} * {var}")
+
+    # Join terms with " + " or " - " as appropriate
+    constraint = " ".join(terms).replace("+ -", "- ").replace("  ", " ")
+
+    if is_equality:
+        return rf"${constraint} = {b}$"
+    else:
+        return rf"${constraint} \le {b}$"
+
+
+def setup_overview(case: Case) -> str:
+    optimization_problem, optimizer = load_optimization_config(case)
+
+    operating_mode = case.options.process_options.operating_mode
+    separation_problem = case.options.process_options.separation_problem
+
+    convert_to_linear = case.options.process_options.convert_to_linear
+    apply_et_assumptions = case.options.process_options.apply_et_assumptions
+
+    include_cycle_time = case.options.optimization_options.include_cycle_time
+
+    objective = case.options.optimization_options.objective
+
+    rows = []
+    rows.append(f"- Operating mode: {operating_mode}")
+    rows.append(f"- Separation problem: {separation_problem}")
+    rows.append(f"- Binding model: {'Linear' if convert_to_linear else 'Langmuir'}")
+    rows.append(f"- Ideal model: {apply_et_assumptions}")
+
+    # Variables
+    if optimization_problem.n_dependent_variables == 0:
+        rows.append("- Variables:")
+    else:
+        rows.append("- Independent variables:")
+
+    var_info = get_variables(
+        operating_mode,
+        include_cycle_time,
+    )
+    for var in optimization_problem.independent_variables:
+        symbol = var_info[var.name]["symbol"]
+        lb = var.lb
+        ub = var.ub
+        if var_info[var.name].get("format_mm_ss"):
+            if not np.isinf(lb):
+                lb = f"${format_mm_ss(lb)}$"
+            if not np.isinf(ub):
+                ub = f"${format_mm_ss(ub)}$"
+        else:
+            lb = lb*var_info[var.name]["factor"]
+            lb = f"${format_value_to_latex(lb)}$"
+            ub = ub*var_info[var.name]["factor"]
+            ub = f"${format_value_to_latex(ub)}$"
+
+        unit = var_info[var.name]["unit"]
+
+        rows.append(rf"  - ${symbol} \in [{lb},{ub}]~/~{unit}$")
+
+    if optimization_problem.n_linear_constraints >= 1:
+        rows.append("- Linear constraints:")
+        for lincon in optimization_problem.linear_constraints:
+            opt_vars = [var_info[var]["symbol"] for var in lincon["opt_vars"]]
+            rows.append(rf"  - {format_linear_constraint(opt_vars, lincon['lhs'], lincon['b'])}")
+
+    # Linear equality constraints
+    if optimization_problem.n_linear_equality_constraints >= 1:
+        rows.append("- Linear equality constraints:")
+        for lincon in optimization_problem.linear_equality_constraints:
+            opt_vars = [var_info[var]["symbol"] for var in lincon["opt_vars"]]
+            rows.append(
+                rf"  - {format_linear_constraint(opt_vars, lincon['lhs'], lincon['beq'], True)}"
+            )
+
+    # TODO: Variable dependencies (might be tricky...)
+    variable_dependencies = get_variable_dependencies(operating_mode, include_cycle_time)
+    if variable_dependencies:
+        rows.append("- Variable dependencies:")
+        for var_dep in variable_dependencies:
+            rows.append(f"  - {var_dep}")
+
+    # Objective
+    rows.append(f"- Objective: {objective}")
+
+    return rows
+
 
 
 # %% Single objective

@@ -89,7 +89,7 @@ def get_variables(
                 "format_mm_ss": True,
             }
             variables["recycle_off_output_state.time"] = {
-                "symbol": r"\Delta t_{\text{recycle,off}}",
+                "symbol": r"t_{\text{recycle,off}}",
                 "unit": r"\text{min}",
                 "factor": 1/60,
                 "format_mm_ss": True,

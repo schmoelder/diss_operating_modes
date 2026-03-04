@@ -330,6 +330,10 @@ def format_float_adaptive(
     # Format scientific notation via numpy
     formatted = np.format_float_scientific(x, precision=precision-1, exp_digits=1)
 
+    # Convert infinities
+    if "inf" in formatted:
+        formatted = formatted.replace("inf", "\infty")
+
     # Convert to LaTeX-style scientific notation
     if 'e' in formatted:
         base, exponent = formatted.split('e')

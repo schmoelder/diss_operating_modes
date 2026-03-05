@@ -553,7 +553,7 @@ def setup_overview(
         operating_mode,
         include_cycle_time,
     )
-    for i, var in enumerate(optimization_problem.independent_variables):
+    for i, var in enumerate(optimization_problem.variables):
         symbol = var_info[var.name]["symbol"]
         lb = var.lb
         ub = var.ub
@@ -570,12 +570,9 @@ def setup_overview(
 
         unit = var_info[var.name]["unit"]
 
+        # Variables
         if i == 0:
-            # Variables
-            if optimization_problem.n_dependent_variables == 0:
-                prefix = "**Variables**"
-            else:
-                prefix = "**Independent Variables**"
+            prefix = "**Variables**"
         else:
             prefix = " "
         rows.append([prefix, f"${symbol} \in [{lb},{ub}]~/~{unit}$"])

@@ -559,9 +559,9 @@ def setup_overview(
         ub = var.ub
         if var_info[var.name].get("format_mm_ss"):
             if not np.isinf(lb):
-                lb = f"{format_mm_ss(lb)}"
+                lb = rf"\text{{{format_mm_ss(lb)}}}"
             if not np.isinf(ub):
-                ub = f"{format_mm_ss(ub)}"
+                ub = rf"\text{{{format_mm_ss(ub)}}}"
         else:
             lb = lb*var_info[var.name]["factor"]
             lb = f"{format_value_to_latex(lb)}"
@@ -695,7 +695,7 @@ def setup_soo_results_table(
     # Add variables
     for i_x, var_info in enumerate(variables.values()):
         if var_info.get("format_mm_ss"):
-            x_i = f"${format_mm_ss(x[i_x])}$"
+            x_i = rf"$\text{{{format_mm_ss(x[i_x])}}}$"
         else:
             x_i = x[i_x]*var_info["factor"]
             x_i = f"${format_value_to_latex(x_i)}$"
@@ -703,7 +703,7 @@ def setup_soo_results_table(
 
     if not include_cycle_time:
         if variables_with_cycle_time["cycle_time"].get("format_mm_ss"):
-            x_i = f"${format_mm_ss(frac.cycle_time)}$"
+            x_i = rf"$\text{{{format_mm_ss(frac.cycle_time)}}}$"
         else:
             x_i = frac.cycle_time*variables_with_cycle_time["cycle_time"]["factor"]
             x_i = f"${format_value_to_latex(x_i)}$"
@@ -779,7 +779,7 @@ def process_soo_results(
         ax.set_xlabel(f"${variable_info['symbol']}~/~{variable_info['unit']}$")
         if variable_info.get("format_mm_ss"):
             ax.xaxis.set_major_formatter(ticker.FuncFormatter(
-                lambda x, _: f"${format_mm_ss(x)}$"
+                lambda x, _: rf"$\text{{{format_mm_ss(x)}}}$"
             ))
         else:
             ax.xaxis.set_major_formatter(ticker.FuncFormatter(
@@ -905,16 +905,16 @@ def setup_moo_results_table(
         # Add variables
         for i_x, var_info in enumerate(variables.values()):
             if var_info.get("format_mm_ss"):
-                x_i = f"${format_mm_ss(x[i_x])}$"
+                x_i = rf"$\text{{{format_mm_ss(x[i_x])}}}$"
             else:
                 x_i = x[i_x]*var_info["factor"]
-                x_i = f"${format_value_to_latex(x_i)}$"
+                x_i = rf"${format_value_to_latex(x_i)}$"
 
             row.append(x_i)
 
         if not include_cycle_time:
             if variables_with_cycle_time["cycle_time"].get("format_mm_ss"):
-                x_i = f"${format_mm_ss(frac.cycle_time)}$"
+                x_i = rf"$\text{{{format_mm_ss(frac.cycle_time)}}}$"
             else:
                 x_i = frac.cycle_time*variables_with_cycle_time["cycle_time"]["factor"]
                 x_i = f"${format_value_to_latex(x_i)}$"
@@ -1003,7 +1003,7 @@ def process_moo_results(
                 ax.set_xlabel(f"${variable_info['symbol']}~/~{variable_info['unit']}$")
                 if variable_info.get("format_mm_ss"):
                     ax.xaxis.set_major_formatter(ticker.FuncFormatter(
-                        lambda x, _: f"${format_mm_ss(x)}$"
+                        lambda x, _: rf"$\text{{{format_mm_ss(x)}}}$"
                     ))
                 else:
                     ax.xaxis.set_major_formatter(ticker.FuncFormatter(

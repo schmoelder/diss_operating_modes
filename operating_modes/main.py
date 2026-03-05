@@ -40,7 +40,7 @@ def setup_process(
     process = case_module.setup_process(column, **kwargs)
 
     if apply_et_assumptions:
-        apply_et_assumptions_to_process(process)
+        apply_et_assumptions_to_process(process, ncol=2500)
 
     return process
 

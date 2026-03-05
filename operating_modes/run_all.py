@@ -315,7 +315,7 @@ if __name__ == "__main__":
         load=True,
         debug=False,
         fractionation_optimizer="COBYLA",
-        ignore_failed=True,
+        ignore_failed=False,
         scale_trust_radius=True,
         transform_variables="linear",
         consider_n_comp_in_linear_constraints=True,

@@ -81,9 +81,13 @@ def setup_options(
     Set up a single case study with the given parameters.
 
     Args:
+        study: The project repository
         operating_mode: The operating mode for the process.
         objective: The optimization objective.
-        separation_problem: The binding model.
+        separation_problem: The separation problem.
+        convert_to_linear: If True, convert binding model to linear.
+        apply_et_assumptions: If True, apply ET assmumptions.
+        include_cycle_time: If True, include cycle time in optimization problem.
         ranking: The ranking for fractionation (default: "equal").
         load: If True, try loading previously run results.
         push: If True, push results after running the case.
@@ -168,6 +172,8 @@ def setup_options(
     return case
 
 
+# %% Setup cases
+
 def setup_cases(
     work_dir: os.PathLike = "./",
     **kwargs: Any,
@@ -176,6 +182,7 @@ def setup_cases(
     Set up cases based on the current environment and parameters.
 
     Args:
+        work_dir: The working directory.
         kwargs: Additional kwargs for iterate cases.
     Returns:
         List of cases.

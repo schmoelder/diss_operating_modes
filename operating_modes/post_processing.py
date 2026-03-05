@@ -214,6 +214,22 @@ def get_case_id(case: Case) -> str:
     return id
 
 
+def get_title(case: Case) -> str:
+    operating_mode = case.options.process_options.operating_mode
+    separation_problem = case.options.process_options.separation_problem
+
+    convert_to_linear = case.options.process_options.convert_to_linear
+    apply_et_assumptions = case.options.process_options.apply_et_assumptions
+
+    objective = case.options.optimization_options.objective
+
+    return (
+        f"{objective} optimization of the {operating_mode} process with a "
+        f"{separation_problem} "
+        f"{'linear' if convert_to_linear else 'Langmuir'} separation problem "
+        f"{'applying ET assumptions' if apply_et_assumptions else ""}"
+    )
+
 # %% Setup cases
 
 def get_cases_by_operating_mode(
@@ -651,9 +667,9 @@ def setup_soo_results_table(
     str
         Markdown table as a string, with LaTeX-formatted values and units.
     """
+    title = get_title(case)
+
     operating_mode = case.options.process_options.operating_mode
-    separation_problem = case.options.process_options.separation_problem
-    objective = case.options.optimization_options.objective
     include_cycle_time = case.options.optimization_options.include_cycle_time
 
     f_meta = PerformanceProduct(ranking="equal")
@@ -729,10 +745,7 @@ def setup_soo_results_table(
     rows.append(row)
 
     # Caption and name
-    table_caption = (
-        f"Optimization variables and KPIs of {objective} optimization of "
-        f"{operating_mode} process with a {separation_problem} component system. "
-    )
+    table_caption = (f"Optimization variables and KPIs of {title}.")
     table_name = f"{get_case_id(case)}_kpi"
 
     return embed_table_in_list_table_directive(
@@ -753,9 +766,9 @@ def process_soo_results(
     tuple[tuple, tuple, str, OptimizationResults, SimulationResults, Fractionator]
 ):
     """Process single-objective optimization results."""
+    title = get_title(case)
+
     operating_mode = case.options.process_options.operating_mode
-    separation_problem = case.options.process_options.separation_problem
-    objective = case.options.optimization_options.objective
 
     optimization_results = load_optimization_results(
         case,
@@ -791,10 +804,7 @@ def process_soo_results(
             lambda y, _: f"{y*metrics['meta']['factor']:.0f}")
         )
 
-    fig_objectives_caption = (
-        f"Objective function values for {objective} optimization of "
-        f"{operating_mode} process with {separation_problem} component system."
-    )
+    fig_objectives_caption = (f"Objective function values for {title}.")
 
     # --- Chromatograms ---
     x = optimization_results.x[0]
@@ -802,10 +812,7 @@ def process_soo_results(
 
     frac = fractionate_results(optimization_problem, simulation_results)
     fig_chrom, ax_chrom = frac.plot_fraction_signal()
-    fig_chrom_caption = (
-        f"Optimal chromatogram of {objective} optimization of "
-        f"{operating_mode} process with {separation_problem} component system."
-    )
+    fig_chrom_caption = (f"Optimal chromatogram of {title}.")
 
     # --- Table ---
     table = setup_soo_results_table(
@@ -1091,7 +1098,7 @@ def process_moo_results(
 
     fig_chrom_caption = (
         f"Chromatograms of Pareto edge points of {objective} optimization of "
-        f"{operating_mode} process with {separation_problem} component system."
+        f"{operating_mode} process with {separation_problem} separation problem."
     )
 
     # --- Table ---

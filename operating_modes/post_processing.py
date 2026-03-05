@@ -544,6 +544,8 @@ def setup_overview(
     include_et_assumption: bool = False,
     caption: str | None = None,
 ) -> str:
+    title = get_title(case)
+
     optimization_problem, optimizer = load_optimization_config(case)
 
     operating_mode = case.options.process_options.operating_mode
@@ -628,12 +630,14 @@ def setup_overview(
     # Objective
     rows.append(["**Objective**", f"{objective}"])
 
-    table_name = f"{get_case_id(case)}_overview"
+    if caption is None:
+        caption = f"Overview of {title}."
+    name = f"{get_case_id(case)}_overview"
 
     return embed_table_in_list_table_directive(
         rows,
         caption,
-        name=table_name,
+        name=name,
         header_rows=0,
         align="left",
     )

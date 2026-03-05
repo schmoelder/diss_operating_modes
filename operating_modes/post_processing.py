@@ -550,6 +550,7 @@ def setup_overview(
 
     operating_mode = case.options.process_options.operating_mode
     separation_problem = case.options.process_options.separation_problem
+    purity_required = case.options.optimization_options.fractionation_options.purity_required
 
     convert_to_linear = case.options.process_options.convert_to_linear
     apply_et_assumptions = case.options.process_options.apply_et_assumptions
@@ -565,6 +566,7 @@ def setup_overview(
         rows.append(["**ET assumption**", f"{apply_et_assumptions}"])
     rows.append(["**Separation problem**", f"{separation_problem}"])
     rows.append(["**Binding model**", f"{'Linear' if convert_to_linear else 'Langmuir'}"])
+    rows.append(["**Purity required**", rf"${purity_required*100}\%$"])
 
     # Variables
     var_info = get_variables(

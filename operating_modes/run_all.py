@@ -228,7 +228,7 @@ def setup_cases(
             "apply_et_assumptions": True,
             "objective": "single-objective",
             "include_cycle_time": False,
-            "purity_required": 1.0,
+            "purity_required": 0.999,
         },
         # Batch-Elution (standard, auto-cycle-time, SOO)
         {

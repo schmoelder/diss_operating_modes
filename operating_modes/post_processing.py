@@ -32,17 +32,17 @@ from operating_modes.main import (
 # Metric units (order matters for iteration!)
 metrics = {
     "productivity": {
-        "symbol": r"PR_i",
+        "symbol": r"PR",
         "unit": r"\text{mol}~\text{L}_{\text{s}}^{-1}~\text{d}^{-1}",
         "factor": 3600*24/1000,
     },
     "recovery": {
-        "symbol": r"Y_i",
+        "symbol": r"Y",
         "unit": r"\text{\%}",
         "factor": 100,
     },
     "eluent_consumption": {
-        "symbol": r"EC_i",
+        "symbol": r"EC",
         "unit": r"\text{m}_{\text{el}}^3~\text{mol}^{-1}",
         "factor": 1,
     },
@@ -52,7 +52,7 @@ metrics = {
         "factor": 3600*24,
     },
     "purity": {
-        "symbol": r"PU_i",
+        "symbol": r"PU",
         "unit": r"\text{\%}",
         "factor": 100,
     },
@@ -703,7 +703,7 @@ def setup_soo_results_table(
         )
         row.append(rf"${variables_with_cycle_time['cycle_time']['symbol']}^*~/$")
     row += [
-        *[rf"${metric_info['symbol']}~/$" for metric_info in metrics.values()]
+        *[rf"${metric_info['symbol']}_i~/$" for metric_info in metrics.values()]
     ]
     rows.append(row)
     # Second row: units
@@ -900,7 +900,7 @@ def setup_moo_results_table(
         )
         row.append(rf"${variables_with_cycle_time['cycle_time']['symbol']}^*~/$")
     row += [
-        *[rf"${metric_info['symbol']}~/$" for metric_info in metrics.values()]
+        *[rf"${metric_info['symbol']}_i~/$" for metric_info in metrics.values()]
     ]
     rows.append(row)
     # Second row: units
@@ -1030,7 +1030,7 @@ def process_moo_results(
                         lambda x, _: f"{x*variable_info['factor']:.0f}"
                     ))
 
-                ax.set_ylabel(f"${metric_info['symbol']}~/~{metric_info['unit']}$")
+                ax.set_ylabel(f"${metric_info['symbol']}_{{{i_comp}}}~/~{metric_info['unit']}$")
                 ax.yaxis.set_major_formatter(ticker.FuncFormatter(
                     lambda y, _: f"{y*metric_info['factor']:.0f}")
                 )

@@ -347,6 +347,7 @@ def simulate_and_plot(
     x: list[float],
     comp_index: int | None = None,
     ax: plt.Axes | None = None,
+    return_results : bool = False,
 ) -> tuple[plt.Figure, plt.Axes]:
     """Simulate and plot individual of optimization results."""
     simulation_results = simulate_results(optimization_problem, x)
@@ -355,6 +356,9 @@ def simulate_and_plot(
     )
 
     fig, ax = fractionator.plot_fraction_signal(ax=ax)
+
+    if return_results:
+        return simulation_results, fractionator, fig, ax
 
     return fig, ax
 

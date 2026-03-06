@@ -10,6 +10,7 @@ from CADETProcess.optimization import (
     OptimizationProblem,
     OptimizerBase,
     OptimizationResults,
+    Population,
 )
 from CADETProcess.simulationResults import SimulationResults
 from CADETProcess import plotting
@@ -284,6 +285,30 @@ def load_optimization_results(
     optimization_results = OptimizationResults(optimization_problem, optimizer)
     optimization_results.load_results(checkpoint_path)
     return optimization_results
+
+
+# %% Slice population
+
+def slice_population(
+    population: Population,
+    target: str,
+    index: int,
+    lb: float,
+    ub: float,
+) -> Population:
+    values = getattr(population, target)
+    indices = np.where((values[:, index] >= lb) & (values[:, index] <= ub))[0]
+
+    pop_new = Population()
+    for ind in indices:
+        pop_new.add_individual(population.individuals[ind])
+
+    return pop_new
+
+
+def get_best_individual(population: Population, index: int):
+    ind = population.f_best_indices[index]
+    return population.individuals[ind]
 
 
 # %% Simulate and fractionate results

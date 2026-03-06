@@ -374,13 +374,13 @@ def format_float_adaptive(
 
     # Convert infinities
     if "inf" in formatted:
-        formatted = formatted.replace("inf", "\infty")
+        formatted = formatted.replace(r"inf", r"\infty")
 
     # Convert to LaTeX-style scientific notation
     if 'e' in formatted:
         base, exponent = formatted.split('e')
         base = base.rstrip('0').rstrip('.') if '.' in base else base
-        formatted = f"{base} \\times 10^{{{int(exponent)}}}"
+        formatted = rf"{base} \times 10^{{{int(exponent)}}}"
 
         # Remove unnecessary 10^0
         if float(exponent) == 0:
@@ -398,16 +398,18 @@ def format_value_to_latex(
     formatted_val = format_float_adaptive(value, precision)
 
     # Apply bold formatting if needed
-    return f"\\mathbf{{{formatted_val}}}" if bold else formatted_val
+    return rf"\mathbf{{{formatted_val}}}" if bold else formatted_val
 
 
-def format_mm_ss(seconds):
+def format_mm_ss(seconds: float, as_text:bool = True) -> str:
     """Format a duration as mm:ss.
 
     Parameters
     ----------
-    seconds : int
+    seconds : float
         Duration in seconds.
+    as_text : bool
+        If True,
 
     Returns
     -------
@@ -415,7 +417,12 @@ def format_mm_ss(seconds):
         Duration formatted as mm:ss.
     """
     m, s = divmod(int(seconds), 60)
-    return f"{m:02d}:{s:02d}"
+    mm_ss = f"{m:02d}:{s:02d}"
+
+    if as_text:
+        mm_ss = rf"\text{{{mm_ss}}}"
+
+    return mm_ss
 
 
 # %% Embed in MyST directives
@@ -579,9 +586,9 @@ def setup_overview(
         ub = var.ub
         if var_info[var.name].get("format_mm_ss"):
             if not np.isinf(lb):
-                lb = rf"\text{{{format_mm_ss(lb)}}}"
+                lb = rf"{format_mm_ss(lb)}"
             if not np.isinf(ub):
-                ub = rf"\text{{{format_mm_ss(ub)}}}"
+                ub = rf"{format_mm_ss(ub)}"
         else:
             lb = lb*var_info[var.name]["factor"]
             lb = f"{format_value_to_latex(lb)}"
@@ -595,7 +602,7 @@ def setup_overview(
             prefix = "**Variables**"
         else:
             prefix = " "
-        rows.append([prefix, f"${symbol} \in [{lb},{ub}]~/~{unit}$"])
+        rows.append([prefix, rf"${symbol} \in [{lb},{ub}]~/~{unit}$"])
 
     # Linear constraints
     for i, lincon in enumerate(optimization_problem.linear_constraints):
@@ -717,7 +724,7 @@ def setup_soo_results_table(
     # Add variables
     for i_x, var_info in enumerate(variables.values()):
         if var_info.get("format_mm_ss"):
-            x_i = rf"$\text{{{format_mm_ss(x[i_x])}}}$"
+            x_i = rf"${format_mm_ss(x[i_x])}$"
         else:
             x_i = x[i_x]*var_info["factor"]
             x_i = f"${format_value_to_latex(x_i)}$"
@@ -725,7 +732,7 @@ def setup_soo_results_table(
 
     if not include_cycle_time:
         if variables_with_cycle_time["cycle_time"].get("format_mm_ss"):
-            x_i = rf"$\text{{{format_mm_ss(frac.cycle_time)}}}$"
+            x_i = rf"${format_mm_ss(frac.cycle_time)}$"
         else:
             x_i = frac.cycle_time*variables_with_cycle_time["cycle_time"]["factor"]
             x_i = f"${format_value_to_latex(x_i)}$"
@@ -798,7 +805,7 @@ def process_soo_results(
         ax.set_xlabel(f"${variable_info['symbol']}~/~{variable_info['unit']}$")
         if variable_info.get("format_mm_ss"):
             ax.xaxis.set_major_formatter(ticker.FuncFormatter(
-                lambda x, _: rf"$\text{{{format_mm_ss(x)}}}$"
+                lambda x, _: rf"${format_mm_ss(x)}$"
             ))
         else:
             ax.xaxis.set_major_formatter(ticker.FuncFormatter(
@@ -918,7 +925,7 @@ def setup_moo_results_table(
         # Add variables
         for i_x, var_info in enumerate(variables.values()):
             if var_info.get("format_mm_ss"):
-                x_i = rf"$\text{{{format_mm_ss(x[i_x])}}}$"
+                x_i = rf"${format_mm_ss(x[i_x])}$"
             else:
                 x_i = x[i_x]*var_info["factor"]
                 x_i = rf"${format_value_to_latex(x_i)}$"
@@ -927,7 +934,7 @@ def setup_moo_results_table(
 
         if not include_cycle_time:
             if variables_with_cycle_time["cycle_time"].get("format_mm_ss"):
-                x_i = rf"$\text{{{format_mm_ss(frac.cycle_time)}}}$"
+                x_i = rf"${format_mm_ss(frac.cycle_time)}$"
             else:
                 x_i = frac.cycle_time*variables_with_cycle_time["cycle_time"]["factor"]
                 x_i = f"${format_value_to_latex(x_i)}$"
@@ -1016,7 +1023,7 @@ def process_moo_results(
                 ax.set_xlabel(f"${variable_info['symbol']}~/~{variable_info['unit']}$")
                 if variable_info.get("format_mm_ss"):
                     ax.xaxis.set_major_formatter(ticker.FuncFormatter(
-                        lambda x, _: rf"$\text{{{format_mm_ss(x)}}}$"
+                        lambda x, _: rf"${format_mm_ss(x)}$"
                     ))
                 else:
                     ax.xaxis.set_major_formatter(ticker.FuncFormatter(

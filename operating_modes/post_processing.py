@@ -425,6 +425,12 @@ def format_mm_ss(seconds: float, as_text:bool = True) -> str:
     return mm_ss
 
 
+def convert_mm_ss_to_s(mm_ss: str) -> float:
+    m, s = mm_ss.split(":")
+
+    return float(m)*60 + float(s)
+
+
 # %% Embed in MyST directives
 
 def embed_table_in_directive(

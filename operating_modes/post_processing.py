@@ -311,6 +311,30 @@ def get_best_individual(population: Population, index: int):
     return population.individuals[ind]
 
 
+# %% Filter failed individuals
+
+def get_failed_population(
+    population: Population,
+) -> Population:
+    indices_failed = np.where((population.f[:, 0] == 0) & (population.f[:, 1] == 0))[0]
+
+    pop_failed = Population()
+    for index in indices_failed:
+        pop_failed.add_individual(pop_all.individuals[index])
+
+    return pop_failed
+
+
+def plot_failed_population(
+    population
+) -> tuple[plt.Figure, np.ndarray[plt.Axes]]:
+    fig, axs = population.plot_pairwise(autoscale=False)
+    pop_failed = get_failed_population(population)
+    pop_failed.plot_pairwise(color_feas="red", ax=axs, autoscale=False)
+
+    return fig, axs
+
+
 # %% Simulate and fractionate results
 
 def simulate_results(

@@ -398,7 +398,7 @@ from CADETProcess.simulationResults import SimulationResults
 
 class CycleTimeDeterminator():
 
-    def __init__(self, threshold_percent: float = 1):
+    def __init__(self, threshold_percent: float = 0.1):
         self.threshold_percent = threshold_percent
 
     def evaluate(

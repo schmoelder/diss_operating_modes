@@ -1,6 +1,7 @@
 import copy
 import os
 from typing import Literal, Optional
+import warnings
 
 from CADETProcess.fractionation import FractionationOptimizer
 from CADETProcess.processModel import Process
@@ -426,51 +427,115 @@ class CycleTimeDeterminator():
             return simulation_results
 
         simulation_results = copy.deepcopy(simulation_results)
+        solution_cycles = simulation_results.solution_cycles
+        process = simulation_results.process
+
+        def get_times(use_outlet: bool = False):
+            if use_outlet:
+                units = process.flow_sheet.outlets
+            else:
+                units = process.flow_sheet.units_with_binding
+            unit_solutions = [
+                solution_cycles[unit.name].outlet[-1]
+                for unit in units
+            ]
+            solutions = np.stack(
+                [sol.solution for sol in unit_solutions],
+                axis=0,
+            )  # shape: (n_chrom, n_time, n_comp)
+
+            c_max = np.max(solutions, axis=(0, 1))  # per component
+            threshold = self.threshold_percent/100 * c_max
+
+            mask_time = np.any(solutions >= threshold, axis=(0, 2))
+            indices = np.flatnonzero(mask_time)
+
+            if indices.size == 0:
+                first, last = 0, solutions.shape[1] - 1
+            else:
+                first, last = indices[0], indices[-1]
+
+            time_first = simulation_results.time_cycle[first]
+            time_last = simulation_results.time_cycle[last]
+
+            return time_first, time_last
 
         # Use column outlets to determine cycle time since using the outlet
         # profiles is not sufficient for processes with internal recycles
         # (especially for CLR)
-        process = simulation_results.process
-        units_with_binding = process.flow_sheet.units_with_binding
-        unit_solutions = [
-            simulation_results.solution_cycles[unit.name].outlet[-1]
-            for unit in units_with_binding
-        ]
+        time_first_column, time_last_column = get_times(use_outlet=False)
+        cycle_time = time_last_column - time_first_column
 
-        solutions = np.stack(
-            [sol.solution for sol in unit_solutions],
-            axis=0,
-        )  # shape: (n_chrom, n_time, n_comp)
+        # If outlet volume does not add up, manually update eluent volume:
+        V_feed = 0
+        for unit in process.flow_sheet.feed_inlets:
+            V_feed += solution_cycles[unit.name].outlet[-1].fraction_volume(
+                0, cycle_time,
+            )
 
-        c_max = np.max(solutions, axis=(0, 1))  # per component
-        threshold = self.threshold_percent/100 * c_max
+        V_eluent = 0
+        for unit in process.flow_sheet.eluent_inlets:
+            V_eluent += solution_cycles[unit.name].outlet[-1].fraction_volume(
+                0, cycle_time,
+            )
 
-        mask_time = np.any(solutions >= threshold, axis=(0, 2))
-        indices = np.flatnonzero(mask_time)
+        V_outlet = 0
+        for unit in process.flow_sheet.product_outlets:
+            V_outlet += solution_cycles[unit.name].outlet[-1].fraction_volume(
+                time_first_column, time_last_column,
+            )
 
-        if indices.size == 0:
-            first, last = 0, solutions.shape[1] - 1
-        else:
-            first, last = indices[0], indices[-1]
+        V_eluent_target = V_outlet - V_feed
+        if not np.allclose(V_eluent_target, V_eluent):
+            warnings.warn("Outlet volumes do not add up!")
 
-        time_first = simulation_results.time_cycle[first]
-        time_last = simulation_results.time_cycle[last]
-        cycle_time = time_last - time_first
+            from scipy.optimize import root_scalar
 
+            def F(end, units, V_target, start=0):
+                total_volume = 0.0
+                for unit in units:
+                    total_volume += solution_cycles[unit.name].outlet[-1].fraction_volume(
+                        0, end,
+                    )
+                return total_volume - V_target
+
+            def find_end(units, V_target, x0):
+                sol = root_scalar(
+                    F,
+                    args=(units, V_target),
+                    x0=x0,
+                    method='brentq',
+                    bracket=[0, process.cycle_time]
+                )
+                return sol.root
+
+            t_end = find_end(
+                process.flow_sheet.eluent_inlets,
+                V_target=V_eluent_target,
+                x0=time_last_column,
+            )
+            cycle_time = t_end
+            time_first_column = time_last_column - cycle_time
+
+        # Update Chromatograms
         chromatograms_new = [
-            slice_solution(chrom, coordinates={"time": [time_first, time_last]})
+            slice_solution(chrom, coordinates={
+                "time": [time_first_column, time_first_column + cycle_time]
+            })
             for chrom in simulation_results.chromatograms
         ]
-        # Shift time
         chromatograms_new = [
-            chrom.offset(-time_first)
+            chrom.offset(-time_first_column)
             for chrom in chromatograms_new
         ]
 
-        process.cycle_time = cycle_time
+        # Update Simulation Results
+        simulation_results.process_meta.cycle_time = cycle_time
         simulation_results.chromatograms = chromatograms_new
+        simulation_results.process_meta.V_eluent = V_eluent_target
 
         return simulation_results
+
 
     __call__ = evaluate
 

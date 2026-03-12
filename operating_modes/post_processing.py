@@ -44,12 +44,12 @@ metrics = {
     },
     "eluent_consumption": {
         "symbol": r"EC",
-        "unit": r"\text{m}_{\text{el}}^3~\text{mol}^{-1}",
+        "unit": r"\text{mol}~\text{m}_{\text{el}}^{-3}",
         "factor": 1,
     },
     "meta": {
         "symbol": r"f(x)",
-        "unit": r"\text{mol}^3~\text{m}_{\text{el}}^{-3}~\text{m}_{\text{s}}^{-3}~\text{d}^{-1}",
+        "unit": r"\text{mol}^6~\text{m}_{\text{s}}^{-3}~\text{d}^{-1}~\text{m}_{\text{el}}^{-3}",
         "factor": 3600*24,
     },
     "purity": {

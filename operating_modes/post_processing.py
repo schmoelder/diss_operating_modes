@@ -274,14 +274,26 @@ def load_optimization_config(
 
 def load_optimization_results(
     case: Case,
-    load_kwargs: Any = None,
+    load_kwargs: dict | None = None,
+    results_branch: str | None = None,
 ) -> OptimizationResults:
-    """Load optimization results for a given case."""
-    results_path = case.load(**load_kwargs or {})
-    if not results_path:
+    """Load optimization results for a given case or a direct results path.
+
+    Args:
+        case: The case object.
+        load_kwargs: Optional keyword arguments to pass to `case.load()`.
+        results_branch: Optional results branch of the results. If provided, bypasses `case.load()`.
+    """
+    if results_branch is not None:
+        path = case.project_repo.copy_data_to_cache(results_branch)
+    else:
+        path = case.load(**load_kwargs or {})
+
+    if not path:
         raise FileNotFoundError("Could not find matching results.")
+
     optimization_problem, optimizer = load_optimization_config(case)
-    checkpoint_path = results_path / "results" / "final.h5"
+    checkpoint_path = path / "results" / "final.h5"
     optimization_results = OptimizationResults(optimization_problem, optimizer)
     optimization_results.load_results(checkpoint_path)
     return optimization_results

@@ -464,6 +464,8 @@ class CycleTimeDeterminator():
         # profiles is not sufficient for processes with internal recycles
         # (especially for CLR)
         time_first_column, time_last_column = get_times(use_outlet=False)
+        t_start = time_first_column
+        t_end = time_last_column
         cycle_time = time_last_column - time_first_column
 
         # If outlet volume does not add up, manually update eluent volume:
@@ -482,7 +484,7 @@ class CycleTimeDeterminator():
         V_outlet = 0
         for unit in process.flow_sheet.product_outlets:
             V_outlet += solution_cycles[unit.name].outlet[-1].fraction_volume(
-                time_first_column, time_last_column,
+                t_start, t_end,
             )
 
         V_eluent_target = V_outlet - V_feed
@@ -495,7 +497,7 @@ class CycleTimeDeterminator():
                 total_volume = 0.0
                 for unit in units:
                     total_volume += solution_cycles[unit.name].outlet[-1].fraction_volume(
-                        0, end,
+                        start, end,
                     )
                 return total_volume - V_target
 
@@ -509,23 +511,34 @@ class CycleTimeDeterminator():
                 )
                 return sol.root
 
-            t_end = find_end(
+            # The theoretical way
+            cycle_time = find_end(
                 process.flow_sheet.eluent_inlets,
                 V_target=V_eluent_target,
                 x0=time_last_column,
             )
-            cycle_time = t_end
-            time_first_column = time_last_column - cycle_time
+
+            # Update times for slicing chromatogram.
+            # Note: Outlet volume may appear inconsistent depending on recycling
+            # location. However, since eluent volume is correctly accounted for
+            # and the full chromatogram is captured, fractionation results are
+            # not affected, allowing for the determination of an idealized cycle
+            # time regardless of when recycling occurs.
+            if time_last_column >= cycle_time:
+                t_start = time_last_column - cycle_time
+            else:
+                t_start = 0
+                t_end = cycle_time
 
         # Update Chromatograms
         chromatograms_new = [
             slice_solution(chrom, coordinates={
-                "time": [time_first_column, time_first_column + cycle_time]
+                "time": [t_start, t_end]
             })
             for chrom in simulation_results.chromatograms
         ]
         chromatograms_new = [
-            chrom.offset(-time_first_column)
+            chrom.offset(-t_start)
             for chrom in chromatograms_new
         ]
 

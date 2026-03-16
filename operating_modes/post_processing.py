@@ -1138,37 +1138,70 @@ def process_moo_results(
                 optimization_problem, sim_results, index
             )
 
+    # Precompute meta score simulation/fractionation once
+    f_meta_index = population.m_best_indices[0]
+    x_meta = population.x[f_meta_index]
+    sim_meta = simulate_results(optimization_problem, x_meta)
+    frac_meta = fractionate_results(optimization_problem, sim_meta)
+
     # Plot
+    n_chrom = len(simulation_results[0][0].chromatograms)
+    if n_chrom == 1:
+        nrows = n_metrics + 1
+        ncols = n_comp
+    else:
+        nrows = n_comp * n_metrics + 1
+        ncols = n_chrom
     fig_chrom, axs_chrom = plotting.setup_figure(
-        nrows=n_metrics+1,
-        ncols=n_comp,
+        nrows=nrows,
+        ncols=ncols,
         scale_with_subplots=True,
     )
 
-    counter = 0
-    for i_metric in range(n_metrics):
-        for i_comp in range(n_comp):
-            frac = fractionators[i_metric, i_comp]
-            ax = axs_chrom[i_metric][i_comp]
-            frac.plot_fraction_signal(ax=ax)
+    if n_chrom == 1:
+        counter = 0
+        for i_metric in range(n_metrics):
+            for i_comp in range(n_comp):
+                frac = fractionators[i_metric, i_comp]
+                ax = axs_chrom[i_metric][i_comp]
+                frac.plot_fraction_signal(ax=ax)
 
-            label = f"({string.ascii_lowercase[counter]})"
+                label = f"({string.ascii_lowercase[counter]})"
+                plotting.add_text(ax, label)
+                counter += 1
+        # Include meta score (performance product)
+        f_meta_index = population.m_best_indices[0]
+        x_meta = population.x[f_meta_index]
+        ax = axs_chrom[-1, 0]
+
+        frac_meta.plot_fraction_signal(ax=ax)
+        label = f"({string.ascii_lowercase[counter]})"
+        plotting.add_text(ax, label)
+
+        for ax in axs_chrom[-1, 1:]:
+            ax.axis('off')
+
+    else:
+        counter = 0
+        for i_metric in range(n_metrics):
+            for i_comp in range(n_comp):
+                frac = fractionators[i_metric, i_comp]
+                for i_chrom, chrom in enumerate(frac.chromatograms):
+                    ax = axs_chrom[counter][i_chrom]
+                    frac.plot_fraction_signal(chrom, ax=ax)
+
+                    outlet = f"Outlet {i_chrom+1}"
+                    label = f"({string.ascii_lowercase[counter]}, {outlet})"
+                    plotting.add_text(ax, label)
+                counter += 1
+
+        # Include meta score (performance product)
+        for i_chrom, chrom in enumerate(frac_meta.chromatograms):
+            ax = axs_chrom[counter][i_chrom]
+            frac_meta.plot_fraction_signal(chrom, ax=ax)
+            outlet = f"Outlet {i_chrom+1}"
+            label = f"({string.ascii_lowercase[counter]}, {outlet})"
             plotting.add_text(ax, label)
-            counter += 1
-
-    # Include meta score (performance product)
-    f_meta_index = population.m_best_indices[0]
-    x_meta = population.x[f_meta_index]
-    ax = axs_chrom[-1, 0]
-
-    sim_meta = simulate_results(optimization_problem, x_meta)
-    frac_meta = fractionate_results(optimization_problem, sim_meta)
-    frac_meta.plot_fraction_signal(ax=ax)
-    label = f"({string.ascii_lowercase[counter]})"
-    plotting.add_text(ax, label)
-
-    for ax in axs_chrom[-1, 1:]:
-        ax.axis('off')
 
     # Get global min/max for x and y
     if set_gobal_limits:

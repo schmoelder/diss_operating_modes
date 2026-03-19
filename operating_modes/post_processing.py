@@ -1037,7 +1037,7 @@ def setup_moo_results_table(
     table_caption = (
         f"Optimization variables and KPIs for Pareto edge points of {objective} "
         f"optimization of the {operating_mode} process with a {separation_problem} "
-        "component system. Each row corresponds to a non-dominated solution "
+        "separation problem. Each row corresponds to a non-dominated solution "
         f"that is extreme with respect to one objective (highlighted in bold)."
     )
     table_name = f"{get_case_id(case)}_kpi"
@@ -1111,7 +1111,7 @@ def process_moo_results(
 
     fig_objectives_caption = (
         f"Objective function values for {objective} optimization of "
-        f"{operating_mode} process with {separation_problem} component system."
+        f"{operating_mode} process with {separation_problem} separation problem."
     )
 
     # --- Chromatograms ---

@@ -332,7 +332,7 @@ def get_failed_population(
 
     pop_failed = Population()
     for index in indices_failed:
-        pop_failed.add_individual(pop_all.individuals[index])
+        pop_failed.add_individual(population.individuals[index])
 
     return pop_failed
 

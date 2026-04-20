@@ -49,8 +49,8 @@ metrics = {
     },
     "meta": {
         "symbol": r"f(x)",
-        "unit": r"\text{mol}^6~\text{m}_{\text{s}}^{-3}~\text{d}^{-1}~\text{m}_{\text{el}}^{-3}",
-        "factor": 3600*24,
+        "unit": r"\text{mol}^6~\text{L}_{\text{s}}^{-1}~\text{d}^{-1}~\text{m}_{\text{el}}^{-3}",
+        "factor": 3600*24/1000,
     },
     "purity": {
         "symbol": r"PU",
@@ -881,12 +881,12 @@ def process_soo_results(
             ))
         else:
             ax.xaxis.set_major_formatter(ticker.FuncFormatter(
-                lambda x, _: f"{x*variable_info['factor']:.0f}"
+                lambda x, _: f"{x*variable_info['factor']:.4g}"
             ))
 
         ax.set_ylabel(f"${metrics['meta']['symbol']}~/~{metrics['meta']['unit']}$")
         ax.yaxis.set_major_formatter(ticker.FuncFormatter(
-            lambda y, _: f"{y*metrics['meta']['factor']:.0f}")
+            lambda y, _: f"{y*metrics['meta']['factor']:.4g}")
         )
 
     fig_objectives_caption = (f"Objective function values for {title}.")
@@ -1099,12 +1099,12 @@ def process_moo_results(
                     ))
                 else:
                     ax.xaxis.set_major_formatter(ticker.FuncFormatter(
-                        lambda x, _: f"{x*variable_info['factor']:.0f}"
+                        lambda x, _: f"{x*variable_info['factor']:.4g}"
                     ))
 
                 ax.set_ylabel(f"${metric_info['symbol']}_{{{i_comp}}}~/~{metric_info['unit']}$")
                 ax.yaxis.set_major_formatter(ticker.FuncFormatter(
-                    lambda y, _: f"{y*metric_info['factor']:.0f}")
+                    lambda y, _: f"{y*metric_info['factor']:.4g}")
                 )
             if metric_name == "meta":
                 break

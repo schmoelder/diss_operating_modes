@@ -541,7 +541,7 @@ def embed_table_in_list_table_directive(
     formatted_table += "\n"
 
     for row in data:
-        # First item in row gets the '*' bullet, others get '-'
+        # First item in row gets the "*" bullet, others get "-"
         formatted_table += f"* - {row[0]}\n"
         for item in row[1:]:
             formatted_table += f"  - {item}\n"
@@ -1109,6 +1109,8 @@ def process_moo_results(
             if metric_name == "meta":
                 break
 
+    fig_objectives.tight_layout()
+
     fig_objectives_caption = (
         f"Objective function values for {objective} optimization of "
         f"{operating_mode} process with {separation_problem} separation problem."
@@ -1165,16 +1167,16 @@ def process_moo_results(
                 frac = fractionators[i_metric, i_comp]
                 ax = axs_chrom[i_metric][i_comp]
                 frac.plot_fraction_signal(ax=ax)
-
                 label = f"({string.ascii_lowercase[counter]})"
                 plotting.add_text(ax, label)
                 counter += 1
+
         # Include meta score (performance product)
         f_meta_index = population.m_best_indices[0]
         x_meta = population.x[f_meta_index]
         ax = axs_chrom[-1, 0]
-
         frac_meta.plot_fraction_signal(ax=ax)
+
         label = f"({string.ascii_lowercase[counter]})"
         plotting.add_text(ax, label)
 
@@ -1189,7 +1191,6 @@ def process_moo_results(
                 for i_chrom, chrom in enumerate(frac.chromatograms):
                     ax = axs_chrom[counter][i_chrom]
                     frac.plot_fraction_signal(chrom, ax=ax)
-
                     outlet = f"Outlet {i_chrom+1}"
                     label = f"({string.ascii_lowercase[counter]}, {outlet})"
                     plotting.add_text(ax, label)
@@ -1213,6 +1214,8 @@ def process_moo_results(
         for ax in axs_chrom.flatten():
             ax.set_xlim(x_min, x_max)
             ax.set_ylim(y_min, y_max)
+
+    fig_chrom.tight_layout()
 
     fig_chrom_caption = (
         f"Chromatograms of Pareto edge points of {objective} optimization of "

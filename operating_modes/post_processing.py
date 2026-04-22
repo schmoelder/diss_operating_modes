@@ -227,8 +227,8 @@ def get_title(case: Case) -> str:
     return (
         f"{objective} optimization of the {operating_mode} process with a "
         f"{separation_problem} "
-        f"{'linear' if convert_to_linear else 'Langmuir'} separation problem "
-        f"{'applying ET assumptions' if apply_et_assumptions else ""}"
+        f"{'linear' if convert_to_linear else 'Langmuir'} separation problem"
+        f"{' applying ET assumptions' if apply_et_assumptions else ""}"
     )
 
 # %% Setup cases

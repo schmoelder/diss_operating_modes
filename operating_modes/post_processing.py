@@ -525,6 +525,7 @@ def embed_table_in_list_table_directive(
     data: str,
     caption: str | None = None,
     name: str | None = None,
+    longtable: bool = False,
     align: str = "center",
     header_rows: int = 1,
 ) -> str:
@@ -538,6 +539,8 @@ def embed_table_in_list_table_directive(
         formatted_table += f":name: {name}\n"
     formatted_table += f":header-rows: {header_rows}\n"
     formatted_table += f":align: {align}\n"
+    if longtable:
+        formatted_table += f":class: longtable\n"
     formatted_table += "\n"
 
     for row in data:

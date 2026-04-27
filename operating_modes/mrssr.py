@@ -145,7 +145,8 @@ def plot_overlay(
         fig, ax = solution_cyc.plot(
             ax=ax,
             alpha=alpha,
-            update_layout=update_layout
+            update_layout=update_layout,
+            setup_figure_kwargs={"layout": "1.5_col"},
         )
 
     return fig, ax
@@ -155,7 +156,11 @@ def plot_last_cycle(
     simulation_results: SimulationResults,
 ) -> tuple[plt.Figure, npt.NDArray[plt.Axes]]:
     """Plot last cycle."""
-    fig, axs = plotting.setup_figure(ncols=2, scale_with_subplots=True)
+    fig, axs = plotting.setup_figure(
+        ncols=2,
+        layout="1.5_col",
+        scale_with_subplots=True,
+    )
     simulation_results.solution_cycles.column.outlet[-1].plot(ax=axs[0])
     simulation_results.solution_cycles.outlet.outlet[-1].plot(ax=axs[1])
 

@@ -132,7 +132,11 @@ def plot_results(
     simulation_results: SimulationResults,
 ) -> tuple[plt.Figure, npt.NDArray[plt.Axes]]:
     """Plot simulation results."""
-    fig, axs = plotting.setup_figure(ncols=3, scale_with_subplots=True)
+    fig, axs = plotting.setup_figure(
+        ncols=3,
+        layout="1.5_col",
+        scale_with_subplots=True,
+    )
     simulation_results.solution.column_1.outlet.plot(ax=axs[0])
     simulation_results.solution.outlet_1.inlet.plot(ax=axs[1])
     simulation_results.solution.outlet_2.inlet.plot(ax=axs[2])

@@ -2,12 +2,13 @@ name: operating_modes
 channels:
   - conda-forge
 dependencies:
-  - python=3.13
-  - cadet>=5.1,<6.0
-  - openssh
-  - git
-  - git-lfs
+  - python==3.14.3
+  - cadet==5.1.1  # build h56c1e75_1
   - pip
   - pip:
-    - cadet-rdm>=1.1.0
-    - cadet-process>=0.11,<1.0
+    - cadet-python==1.1.2
+    - cadet-process==0.12.0
+    - cadet-rdm==1.1.2
+    - numpy==2.4.4
+    - scipy==1.17.1
+    - pymoo==0.6.1.6

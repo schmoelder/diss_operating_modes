@@ -1053,6 +1053,99 @@ def setup_moo_results_table(
     )
 
 
+def plot_moo_chromatograms(
+    optimization_problem: ProcessOptimization,
+    objective: str,
+    simulation_results: np.ndarray[SimulationResults],
+    fractionators: np.ndarray[Fractionator],
+    frac_meta: Fractionator,
+    ax: np.ndarray[plt.Axes] | None = None,
+    setup_figure_kwargs: dict | None = None,
+    set_global_limits: bool = True,
+) -> tuple[plt.Figure, np.ndarray[plt.Axes]]:
+    """Plot chromatograms of Pareto edge points for multi-objective results."""
+    n_comp = optimization_problem.evaluation_objects[0].n_comp
+    n_metrics = int(optimization_problem.n_objectives / n_comp)
+    n_chrom = len(simulation_results[0][0].chromatograms)
+
+    if n_chrom == 1:
+        nrows = n_metrics + 1
+        ncols = n_comp
+    else:
+        nrows = n_comp * n_metrics + 1
+        ncols = n_chrom
+
+    if ax is None:
+        fig, axs_chrom = plotting.setup_figure(
+            nrows=nrows,
+            ncols=ncols,
+            **{"scale_with_subplots": True, **(setup_figure_kwargs or {})},
+        )
+    else:
+        axs_chrom = np.asarray(ax, dtype=object)
+        if axs_chrom.shape != (nrows, ncols):
+            raise ValueError(
+                "Inconsistent shape for provided axs. "
+                f"Expected {(nrows, ncols)}, got {axs_chrom.shape}."
+            )
+        fig = axs_chrom[0, 0].get_figure()
+
+    if n_chrom == 1:
+        counter = 0
+        for i_metric in range(n_metrics):
+            for i_comp in range(n_comp):
+                frac = fractionators[i_metric, i_comp]
+                ax_ij = axs_chrom[i_metric][i_comp]
+                frac.plot_fraction_signal(ax=ax_ij)
+                label = f"({string.ascii_lowercase[counter]})"
+                plotting.add_text(ax_ij, label)
+                counter += 1
+
+        ax_meta = axs_chrom[-1, 0]
+        frac_meta.plot_fraction_signal(ax=ax_meta)
+
+        label = f"({string.ascii_lowercase[counter]})"
+        plotting.add_text(ax_meta, label)
+
+        for ax_off in axs_chrom[-1, 1:]:
+            ax_off.axis("off")
+
+    else:
+        counter = 0
+        for i_metric in range(n_metrics):
+            for i_comp in range(n_comp):
+                frac = fractionators[i_metric, i_comp]
+                for i_chrom, chrom in enumerate(frac.chromatograms):
+                    ax_ij = axs_chrom[counter][i_chrom]
+                    frac.plot_fraction_signal(chrom, ax=ax_ij)
+                    outlet = f"Outlet {i_chrom+1}"
+                    label = f"({string.ascii_lowercase[counter]}, {outlet})"
+                    plotting.add_text(ax_ij, label)
+                counter += 1
+
+        for i_chrom, chrom in enumerate(frac_meta.chromatograms):
+            ax_ij = axs_chrom[counter][i_chrom]
+            frac_meta.plot_fraction_signal(chrom, ax=ax_ij)
+            outlet = f"Outlet {i_chrom+1}"
+            label = f"({string.ascii_lowercase[counter]}, {outlet})"
+            plotting.add_text(ax_ij, label)
+
+    if set_global_limits:
+        x_min = min(ax_ij.get_xlim()[0] for ax_ij in axs_chrom.flatten())
+        x_max = max(ax_ij.get_xlim()[1] for ax_ij in axs_chrom.flatten())
+        y_min = min(ax_ij.get_ylim()[0] for ax_ij in axs_chrom.flatten())
+        y_max = max(ax_ij.get_ylim()[1] for ax_ij in axs_chrom.flatten())
+
+        for ax_ij in axs_chrom.flatten():
+            ax_ij.set_xlim(x_min, x_max)
+            ax_ij.set_ylim(y_min, y_max)
+
+    for figure in {ax_ij.get_figure() for ax_ij in axs_chrom.flatten()}:
+        figure.tight_layout()
+
+    return fig, axs_chrom
+
+
 def process_moo_results(
     case: Case,
     load_kwargs: dict | None = None,
@@ -1149,76 +1242,14 @@ def process_moo_results(
     sim_meta = simulate_results(optimization_problem, x_meta)
     frac_meta = fractionate_results(optimization_problem, sim_meta)
 
-    # Plot
-    n_chrom = len(simulation_results[0][0].chromatograms)
-    if n_chrom == 1:
-        nrows = n_metrics + 1
-        ncols = n_comp
-    else:
-        nrows = n_comp * n_metrics + 1
-        ncols = n_chrom
-    fig_chrom, axs_chrom = plotting.setup_figure(
-        nrows=nrows,
-        ncols=ncols,
-        scale_with_subplots=True,
+    fig_chrom, axs_chrom = plot_moo_chromatograms(
+        optimization_problem,
+        objective,
+        simulation_results,
+        fractionators,
+        frac_meta,
+        set_global_limits=set_gobal_limits,
     )
-
-    if n_chrom == 1:
-        counter = 0
-        for i_metric in range(n_metrics):
-            for i_comp in range(n_comp):
-                frac = fractionators[i_metric, i_comp]
-                ax = axs_chrom[i_metric][i_comp]
-                frac.plot_fraction_signal(ax=ax)
-                label = f"({string.ascii_lowercase[counter]})"
-                plotting.add_text(ax, label)
-                counter += 1
-
-        # Include meta score (performance product)
-        f_meta_index = population.m_best_indices[0]
-        x_meta = population.x[f_meta_index]
-        ax = axs_chrom[-1, 0]
-        frac_meta.plot_fraction_signal(ax=ax)
-
-        label = f"({string.ascii_lowercase[counter]})"
-        plotting.add_text(ax, label)
-
-        for ax in axs_chrom[-1, 1:]:
-            ax.axis('off')
-
-    else:
-        counter = 0
-        for i_metric in range(n_metrics):
-            for i_comp in range(n_comp):
-                frac = fractionators[i_metric, i_comp]
-                for i_chrom, chrom in enumerate(frac.chromatograms):
-                    ax = axs_chrom[counter][i_chrom]
-                    frac.plot_fraction_signal(chrom, ax=ax)
-                    outlet = f"Outlet {i_chrom+1}"
-                    label = f"({string.ascii_lowercase[counter]}, {outlet})"
-                    plotting.add_text(ax, label)
-                counter += 1
-
-        # Include meta score (performance product)
-        for i_chrom, chrom in enumerate(frac_meta.chromatograms):
-            ax = axs_chrom[counter][i_chrom]
-            frac_meta.plot_fraction_signal(chrom, ax=ax)
-            outlet = f"Outlet {i_chrom+1}"
-            label = f"({string.ascii_lowercase[counter]}, {outlet})"
-            plotting.add_text(ax, label)
-
-    # Get global min/max for x and y
-    if set_gobal_limits:
-        x_min = min(ax.get_xlim()[0] for ax in axs_chrom.flatten())
-        x_max = max(ax.get_xlim()[1] for ax in axs_chrom.flatten())
-        y_min = min(ax.get_ylim()[0] for ax in axs_chrom.flatten())
-        y_max = max(ax.get_ylim()[1] for ax in axs_chrom.flatten())
-
-        for ax in axs_chrom.flatten():
-            ax.set_xlim(x_min, x_max)
-            ax.set_ylim(y_min, y_max)
-
-    fig_chrom.tight_layout()
 
     fig_chrom_caption = (
         f"Chromatograms of Pareto edge points of {objective} optimization of "

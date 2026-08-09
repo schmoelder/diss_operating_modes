@@ -347,6 +347,41 @@ def plot_failed_population(
     return fig, axs
 
 
+def _resize_fraction_overlay(ax: plt.Axes) -> None:
+    """Resize fraction fills after shared y-limits have been applied."""
+    _, y_max = ax.get_ylim()
+
+    for collection in ax.collections:
+        if collection.get_alpha() != 0.3:
+            continue
+
+        for path in collection.get_paths():
+            vertices = path.vertices
+            if vertices.size == 0:
+                continue
+
+            old_y_max = np.max(vertices[:, 1])
+            vertices[np.isclose(vertices[:, 1], old_y_max), 1] = y_max
+
+    for text in ax.texts:
+        if text.get_transform() is not ax.transData:
+            continue
+
+        text.set_y(0.5 * y_max)
+
+
+def _plot_fraction_signal(
+    fractionator: Fractionator,
+    chromatogram=None,
+    ax: plt.Axes | None = None,
+) -> tuple[plt.Figure, plt.Axes]:
+    """Plot fraction signal and bind overlay height to the target axes."""
+    fig, ax = fractionator.plot_fraction_signal(chromatogram, ax=ax)
+    _resize_fraction_overlay(ax)
+
+    return fig, ax
+
+
 # %% Simulate and fractionate results
 
 def simulate_results(
@@ -391,7 +426,7 @@ def simulate_and_plot(
         optimization_problem, simulation_results, comp_index
     )
 
-    fig, ax = fractionator.plot_fraction_signal(ax=ax)
+    fig, ax = _plot_fraction_signal(fractionator, ax=ax)
 
     if return_results:
         return simulation_results, fractionator, fig, ax
@@ -1096,13 +1131,13 @@ def plot_moo_chromatograms(
             for i_comp in range(n_comp):
                 frac = fractionators[i_metric, i_comp]
                 ax_ij = axs_chrom[i_metric][i_comp]
-                frac.plot_fraction_signal(ax=ax_ij)
+                _plot_fraction_signal(frac, ax=ax_ij)
                 label = f"({string.ascii_lowercase[counter]})"
                 plotting.add_text(ax_ij, label)
                 counter += 1
 
         ax_meta = axs_chrom[-1, 0]
-        frac_meta.plot_fraction_signal(ax=ax_meta)
+        _plot_fraction_signal(frac_meta, ax=ax_meta)
 
         label = f"({string.ascii_lowercase[counter]})"
         plotting.add_text(ax_meta, label)
@@ -1117,7 +1152,7 @@ def plot_moo_chromatograms(
                 frac = fractionators[i_metric, i_comp]
                 for i_chrom, chrom in enumerate(frac.chromatograms):
                     ax_ij = axs_chrom[counter][i_chrom]
-                    frac.plot_fraction_signal(chrom, ax=ax_ij)
+                    _plot_fraction_signal(frac, chrom, ax=ax_ij)
                     outlet = f"Outlet {i_chrom+1}"
                     label = f"({string.ascii_lowercase[counter]}, {outlet})"
                     plotting.add_text(ax_ij, label)
@@ -1125,7 +1160,7 @@ def plot_moo_chromatograms(
 
         for i_chrom, chrom in enumerate(frac_meta.chromatograms):
             ax_ij = axs_chrom[counter][i_chrom]
-            frac_meta.plot_fraction_signal(chrom, ax=ax_ij)
+            _plot_fraction_signal(frac_meta, chrom, ax=ax_ij)
             outlet = f"Outlet {i_chrom+1}"
             label = f"({string.ascii_lowercase[counter]}, {outlet})"
             plotting.add_text(ax_ij, label)
@@ -1139,6 +1174,7 @@ def plot_moo_chromatograms(
         for ax_ij in axs_chrom.flatten():
             ax_ij.set_xlim(x_min, x_max)
             ax_ij.set_ylim(y_min, y_max)
+            _resize_fraction_overlay(ax_ij)
 
     for figure in {ax_ij.get_figure() for ax_ij in axs_chrom.flatten()}:
         figure.tight_layout()

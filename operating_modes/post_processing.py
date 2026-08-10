@@ -30,6 +30,22 @@ from operating_modes.main import (
 
 # %% Utils
 
+# Display names for operating modes. The keys identify cases and result branches and
+# must not change; only the rendering in captions and tables differs.
+operating_mode_labels = {
+    "batch-elution": "batch-elution",
+    "CLR": "CLR",
+    "flip-flop": "flip-flop",
+    "MRSSR": "MR-SSR",
+    "serial-columns": "serial-columns",
+}
+
+
+def get_operating_mode_label(operating_mode: str) -> str:
+    """Return the name of an operating mode as it is written in the thesis."""
+    return operating_mode_labels.get(operating_mode, operating_mode)
+
+
 # Metric units (order matters for iteration!)
 metrics = {
     "productivity": {
@@ -225,8 +241,8 @@ def get_title(case: Case) -> str:
     objective = case.options.optimization_options.objective
 
     return (
-        f"{objective} optimization of the {operating_mode} process with a "
-        f"{separation_problem} "
+        f"{objective} optimization of the {get_operating_mode_label(operating_mode)} "
+        f"process with a {separation_problem} "
         f"{'linear' if convert_to_linear else 'Langmuir'} separation problem"
         f"{' applying ET assumptions' if apply_et_assumptions else ""}"
     )
@@ -678,7 +694,7 @@ def setup_overview(
 
     rows = []
     if include_operating_mode:
-        rows.append(["**Operating mode**", f"{operating_mode}"])
+        rows.append(["**Operating mode**", f"{get_operating_mode_label(operating_mode)}"])
     if include_et_assumption:
         rows.append(["**ET assumption**", f"{apply_et_assumptions}"])
     rows.append(["**Separation problem**", f"{separation_problem}"])
@@ -1074,7 +1090,8 @@ def setup_moo_results_table(
     # Caption and name
     table_caption = (
         f"Optimization variables and KPIs for Pareto edge points of {objective} "
-        f"optimization of the {operating_mode} process with a {separation_problem} "
+        f"optimization of the {get_operating_mode_label(operating_mode)} process with "
+        f"a {separation_problem} "
         "separation problem. Each row corresponds to a non-dominated solution "
         f"that is extreme with respect to one objective (highlighted in bold)."
     )
@@ -1244,8 +1261,9 @@ def process_moo_results(
     fig_objectives.tight_layout()
 
     fig_objectives_caption = (
-        f"Objective function values for {objective} optimization of "
-        f"{operating_mode} process with {separation_problem} separation problem."
+        f"Objective function values for {objective} optimization of the "
+        f"{get_operating_mode_label(operating_mode)} process with the "
+        f"{separation_problem} separation problem."
     )
 
     # --- Chromatograms ---
@@ -1288,8 +1306,9 @@ def process_moo_results(
     )
 
     fig_chrom_caption = (
-        f"Chromatograms of Pareto edge points of {objective} optimization of "
-        f"{operating_mode} process with {separation_problem} separation problem."
+        f"Chromatograms of Pareto edge points of {objective} optimization of the "
+        f"{get_operating_mode_label(operating_mode)} process with the "
+        f"{separation_problem} separation problem."
     )
 
     # --- Table ---

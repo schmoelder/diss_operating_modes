@@ -93,16 +93,10 @@ def setup_linear_constraints(
             "lhs": [1 if not n_comp else n_comp, -1],
             "b": 0.0,
         })
-        # Ensure serial off starts before end of cycle
+        # Ensure serial connection is restored before end of cycle
         linear_constraints.append({
-            "opt_vars": ["serial_off.time", "cycle_time"],
-            "lhs": [1 if not n_comp else n_comp, -1],
-            "b": 0.0,
-        })
-        # Ensure serial duration is shorter than cycle time
-        linear_constraints.append({
-            "opt_vars": ["serial_duration", "cycle_time"],
-            "lhs": [1],
+            "opt_vars": ["serial_off.time", "serial_duration", "cycle_time"],
+            "lhs": [1, 1, -1],
             "b": 0.0,
         })
     return linear_constraints
